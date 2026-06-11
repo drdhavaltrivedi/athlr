@@ -52,7 +52,17 @@ export default function UserSearchScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Find Friends', presentation: 'modal' }} />
+      <Stack.Screen 
+        options={{ 
+          title: 'Find Friends', 
+          presentation: 'modal',
+          headerLeft: () => (
+            <Pressable onPress={() => router.back()}>
+              <Text style={{ color: colors.accent, fontSize: 16, fontWeight: '600' }}>Done</Text>
+            </Pressable>
+          )
+        }} 
+      />
       <View style={styles.container}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={colors.textDim} style={styles.searchIcon} />
@@ -62,7 +72,6 @@ export default function UserSearchScreen() {
             placeholderTextColor={colors.textDim}
             value={query}
             onChangeText={setQuery}
-            autoFocus
             autoCapitalize="none"
           />
         </View>
