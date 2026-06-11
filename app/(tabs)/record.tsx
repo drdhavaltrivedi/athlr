@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -100,8 +101,12 @@ export default function RecordScreen() {
     const perms = await requestPermissions();
     if (!perms.foreground) {
       Alert.alert(
-        'Location needed',
-        'Athlr needs location access to record your activity. Enable it in Settings.',
+        'Location Access Required',
+        'Athlr needs location access to track your run. Please enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+        ]
       );
       return;
     }

@@ -38,14 +38,11 @@ TaskManager.defineTask(TASK_NAME, async ({ data, error }) => {
   for (const loc of locations) ingest(toTrackPoint(loc));
 });
 
-export async function requestPermissions(): Promise<{
-  foreground: boolean;
-  background: boolean;
-}> {
+export async function requestPermissions() {
   const fg = await Location.requestForegroundPermissionsAsync();
-  if (fg.status !== 'granted') return { foreground: false, background: false };
+  if (fg.status !== 'granted') return { foreground: false, background: false, canAskAgainForeground: fg.canAskAgain };
   const bg = await Location.requestBackgroundPermissionsAsync();
-  return { foreground: true, background: bg.status === 'granted' };
+  return { foreground: true, background: bg.status === 'granted', canAskAgainForeground: fg.canAskAgain };
 }
 
 export async function startTracking(): Promise<void> {
