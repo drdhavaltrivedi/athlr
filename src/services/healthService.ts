@@ -227,6 +227,9 @@ const HC_READ_PERMISSIONS = [
   { accessType: 'read', recordType: 'Steps' },
   { accessType: 'read', recordType: 'ElevationGained' },
   { accessType: 'read', recordType: 'Speed' },
+  { accessType: 'write', recordType: 'ExerciseSession' },
+  { accessType: 'write', recordType: 'Distance' },
+  { accessType: 'write', recordType: 'ElevationGained' },
 ];
 
 async function initializeHC(): Promise<boolean> {
@@ -395,6 +398,75 @@ export async function importWorkouts(since: Date): Promise<ImportedWorkout[]> {
   if (Platform.OS === 'ios') return importFromHealthKit(since);
   if (Platform.OS === 'android') return importFromHealthConnect(since);
   return [];
+}
+
+/**
+ * Reverse mapping for HealthKit/HealthConnect sport types
+ */
+function toHKSport(sport: SportType): number {
+  const code = Object.keys(HK_SPORT_MAP).find(k => HK_SPORT_MAP[parseInt(k, 10)] === sport);
+  return code ? parseInt(code, 10) : 37; // Default running
+}
+
+function toHCSport(sport: SportType): number {
+  const code = Object.keys(HC_SPORT_MAP).find(k => HC_SPORT_MAP[parseInt(k, 10)] === sport);
+  return code ? parseInt(code, 10) : 79; // Default running
+}
+
+/**
+ * Export an Athlr activity to the native health store.
+ */
+export async function syncActivityToHealth(activity: Activity): Promise<boolean> {
+  const hasPerm = await requestPermissions();
+  if (!hasPerm) return false;
+
+  try {
+    if (Platform.OS === 'ios' && AppleHealthKit) {
+      await new Promise((resolve, reject) => {
+        AppleHealthKit.saveWorkout(
+          {
+            type: toHKSport(activity.sport),
+            startDate: new Date(activity.startedAt).toISOString(),
+            endDate: new Date(activity.endedAt).toISOString(),
+            energyBurned: 0, // Omit calories for now
+            energyBurnedUnit: 'calorie',
+            distance: activity.distanceM / 1000, // HK uses kilometers
+            distanceUnit: 'kilometer',
+          },
+          (err: any, res: any) => {
+            if (err) reject(err);
+            else resolve(res);
+          }
+        );
+      });
+      return true;
+    } else if (Platform.OS === 'android' && HC) {
+      await HC.insertRecords([
+        {
+          recordType: 'ExerciseSession',
+          exerciseType: toHCSport(activity.sport),
+          startTime: new Date(activity.startedAt).toISOString(),
+          endTime: new Date(activity.endedAt).toISOString(),
+        },
+        {
+          recordType: 'Distance',
+          startTime: new Date(activity.startedAt).toISOString(),
+          endTime: new Date(activity.endedAt).toISOString(),
+          distance: { inMeters: activity.distanceM },
+        },
+        {
+          recordType: 'ElevationGained',
+          startTime: new Date(activity.startedAt).toISOString(),
+          endTime: new Date(activity.endedAt).toISOString(),
+          elevation: { inMeters: activity.elevationGainM },
+        }
+      ]);
+      return true;
+    }
+  } catch (err) {
+    console.error('Failed to sync to health', err);
+  }
+  return false;
 }
 
 /**

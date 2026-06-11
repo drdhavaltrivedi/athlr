@@ -17,6 +17,7 @@ import { deleteActivity, getActivity, updateTitle, updateVisibility } from '@/db
 import { Activity, ActivityVisibility } from '@/types';
 import { exportAndShareGpx } from '@/utils/gpx';
 import ShareCard from '@/components/ShareCard';
+import * as healthService from '@/services/healthService';
 import { colors, radii, spacing, type } from '@/theme';
 import { useRecordingStore } from '@/store/recordingStore';
 import {
@@ -148,17 +149,23 @@ export default function ActivityDetailScreen() {
   };
 
   const onDelete = () => {
-    Alert.alert('Delete activity?', 'This cannot be undone.', [
+    Alert.alert('Delete Activity', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteActivity(activity.id);
-          router.back();
-        },
-      },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        await deleteActivity(id as string);
+        router.back();
+      }},
     ]);
+  };
+
+  const onSyncHealth = async () => {
+    if (!activity) return;
+    const success = await healthService.syncActivityToHealth(activity);
+    if (success) {
+      Alert.alert('Success', 'Activity synced to Apple Health / Google Fit!');
+    } else {
+      Alert.alert('Permission Denied', 'Please enable Health permissions in your device settings.');
+    }
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -260,6 +267,7 @@ export default function ActivityDetailScreen() {
               onPress={onShareImage} 
             />
             <ActionButton icon="download-outline" label="GPX" onPress={() => exportAndShareGpx(activity)} />
+            <ActionButton icon="heart-outline" label="Health" onPress={onSyncHealth} />
             <ActionButton icon="trash-outline" label="Delete" onPress={onDelete} danger />
           </View>
         </View>

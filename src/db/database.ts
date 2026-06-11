@@ -87,6 +87,9 @@ export async function saveActivity(
   if (a.visibility !== 'private') {
     import('@/services/cloudSyncService').then(m => m.syncActivityToCloud(a)).catch(console.error);
   }
+
+  // Automatically sync to Apple Health / Health Connect
+  import('@/services/healthService').then(m => m.syncActivityToHealth(a)).catch(console.error);
 }
 
 /** Returns true if a workout with the given sourceId is already in the DB. */
