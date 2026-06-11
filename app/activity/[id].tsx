@@ -19,6 +19,7 @@ import { exportAndShareGpx } from '@/utils/gpx';
 import ShareCard from '@/components/ShareCard';
 import * as healthService from '@/services/healthService';
 import * as mapCache from '@/services/mapCacheService';
+import * as segmentService from '@/services/segmentService';
 import { colors, radii, spacing, type } from '@/theme';
 import { useRecordingStore } from '@/store/recordingStore';
 import {
@@ -45,10 +46,16 @@ export default function ActivityDetailScreen() {
   const units = useRecordingStore((s) => s.units);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [segmentEfforts, setSegmentEfforts] = useState<segmentService.SegmentEffort[]>([]);
   const shareCardRef = React.useRef<View>(null);
 
   useEffect(() => {
-    if (id) getActivity(id).then(setActivity).catch(console.warn);
+    if (id) {
+      getActivity(id).then((data) => {
+        setActivity(data);
+        segmentService.getEffortsForActivity(id).then(setSegmentEfforts);
+      }).catch(console.warn);
+    }
   }, [id]);
 
   if (!activity) {
@@ -264,6 +271,26 @@ export default function ActivityDetailScreen() {
             </View>
           )}
 
+          {/* Segments Section */}
+          {segmentEfforts.length > 0 && (
+            <View style={styles.segmentsCard}>
+              <Text style={type.h3}>Segments ({segmentEfforts.length})</Text>
+              {segmentEfforts.map(effort => (
+                <Pressable 
+                  key={effort.id} 
+                  style={styles.segmentItem}
+                  onPress={() => router.push(`/segment/${effort.segmentId}`)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={type.body}>{effort.segmentName || 'Unknown Segment'}</Text>
+                    <Text style={type.caption}>{formatDuration(effort.elapsedTimeS)}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           {/* Action buttons */}
           <View style={styles.actions}>
             <ActionButton icon="share-outline" label="Text" onPress={onShare} />
@@ -273,6 +300,7 @@ export default function ActivityDetailScreen() {
               onPress={onShareImage} 
             />
             <ActionButton icon="download-outline" label="GPX" onPress={() => exportAndShareGpx(activity)} />
+            <ActionButton icon="map-outline" label="Segment" onPress={() => router.push(`/segment/create/${activity.id}`)} />
             <ActionButton icon="heart-outline" label="Health" onPress={onSyncHealth} />
             <ActionButton icon="trash-outline" label="Delete" onPress={onDelete} danger />
           </View>

@@ -86,6 +86,7 @@ export async function saveActivity(
   // Sync to cloud if visibility is not private
   if (a.visibility !== 'private') {
     import('@/services/cloudSyncService').then(m => m.syncActivityToCloud(a)).catch(console.error);
+    import('@/services/segmentService').then(m => m.matchActivityToSegments(a)).catch(console.error);
   }
 
   // Automatically sync to Apple Health / Health Connect

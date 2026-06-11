@@ -99,3 +99,28 @@ export interface WeekStats {
   elevationGainM: number;
   activities: number;
 }
+
+export interface Segment {
+  id: string;
+  name: string;
+  creatorId: string;
+  creatorName: string;
+  startPoint: { lat: number; lon: number };
+  endPoint: { lat: number; lon: number };
+  distanceMeters: number;
+  elevationGainMeters: number;
+  polyline: string; // encoded coordinates
+  createdAt: number;
+}
+
+export interface SegmentEffort {
+  id: string;
+  segmentId: string;
+  segmentName: string;
+  userId: string;
+  userName: string;
+  activityId: string;
+  elapsedTimeS: number;
+  date: number; // unix epoch ms
+}
+
