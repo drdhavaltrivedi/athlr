@@ -562,9 +562,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  actions: { flexDirection: 'row', gap: spacing.s },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.s },
   actionButton: {
-    flex: 1,
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
