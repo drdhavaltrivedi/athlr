@@ -12,6 +12,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { lifetimeStats, LifetimeStats } from '@/db/database';
 import { useRecordingStore } from '@/store/recordingStore';
+import { useAuthStore } from '@/store/authStore';
+import { auth } from '@/services/firebase';
+import { signOut } from 'firebase/auth';
 import { colors, radii, spacing, type } from '@/theme';
 import { formatDistance, formatDuration, distanceUnit } from '@/utils/format';
 import { Units } from '@/types';
@@ -31,6 +34,8 @@ export default function ProfileScreen() {
   const setUnits = useRecordingStore((s) => s.setUnits);
   const displayName = useRecordingStore((s) => s.displayName);
   const setDisplayName = useRecordingStore((s) => s.setDisplayName);
+
+  const { user } = useAuthStore();
 
   useFocusEffect(
     useCallback(() => {
@@ -61,20 +66,26 @@ export default function ProfileScreen() {
     >
       {/* Avatar + name card */}
       <View style={styles.profileCard}>
-        <Pressable style={styles.avatar} onPress={onEditName}>
-          <Text style={styles.avatarText}>{initials}</Text>
+        <Pressable style={styles.avatar} onPress={user ? undefined : () => router.push('/auth')}>
+          <Text style={styles.avatarText}>{user?.displayName?.[0]?.toUpperCase() || initials}</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Pressable onPress={onEditName}>
+          <Pressable onPress={user ? undefined : () => router.push('/auth')}>
             <Text style={type.title}>
-              {displayName || 'Tap to add your name'}
+              {user ? user.displayName : (displayName || 'Tap to sign in')}
             </Text>
+            <Text style={type.caption}>{user ? user.email : 'Athlr athlete'}</Text>
           </Pressable>
-          <Text style={type.caption}>Athlr athlete</Text>
         </View>
-        <Pressable onPress={onEditName}>
-          <Ionicons name="pencil" size={18} color={colors.accent} />
-        </Pressable>
+        {!user ? (
+          <Pressable onPress={() => router.push('/auth')} style={styles.loginBtn}>
+            <Text style={styles.loginBtnText}>Log In</Text>
+          </Pressable>
+        ) : (
+          <Pressable onPress={() => signOut(auth)} style={styles.logoutBtn}>
+            <Ionicons name="log-out-outline" size={20} color={colors.textDim} />
+          </Pressable>
+        )}
       </View>
 
       {/* Lifetime stats */}
@@ -222,6 +233,22 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 22,
     fontWeight: '800',
+  },
+  loginBtn: {
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.m,
+    paddingVertical: spacing.s,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  loginBtnText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  logoutBtn: {
+    padding: spacing.s,
   },
 
   card: {

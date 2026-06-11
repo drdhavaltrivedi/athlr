@@ -65,6 +65,8 @@ export interface Activity {
   visibility: ActivityVisibility;
   points: TrackPoint[];
   splits: Split[];
+  userName?: string;
+  uid?: string;
 }
 
 /** Lightweight row used for lists (points not loaded). */

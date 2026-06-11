@@ -27,7 +27,7 @@ function toTrackPoint(loc: Location.LocationObject): TrackPoint {
 }
 
 // Background task: receives batches of fixes while app is backgrounded.
-TaskManager.defineTask(TASK_NAME, ({ data, error }) => {
+TaskManager.defineTask(TASK_NAME, async ({ data, error }) => {
   if (error) {
     console.warn('[location-task]', error.message);
     return;

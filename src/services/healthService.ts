@@ -140,14 +140,14 @@ async function initializeHK(): Promise<boolean> {
 async function importFromHealthKit(since: Date): Promise<ImportedWorkout[]> {
   if (!AppleHealthKit || !hkInitialized) return [];
 
-  const workouts: any[] = await new Promise((resolve, reject) => {
+  const workouts: any[] = await new Promise<any[]>((resolve, reject) => {
     AppleHealthKit.getSamples(
       {
         startDate: since.toISOString(),
         endDate: new Date().toISOString(),
         type: 'Workout',
       },
-      (err: unknown, results: any[]) => {
+      (err: any, results: any[]) => {
         if (err) reject(err);
         else resolve(results ?? []);
       },
@@ -158,10 +158,10 @@ async function importFromHealthKit(since: Date): Promise<ImportedWorkout[]> {
 
   for (const w of workouts) {
     // Fetch heart rate samples for this workout's time window
-    const hrSamples: any[] = await new Promise((res) => {
+    const hrSamples: any[] = await new Promise<any[]>((res) => {
       AppleHealthKit.getHeartRateSamples(
         { startDate: w.start, endDate: w.end },
-        (_: unknown, r: any[]) => res(r ?? []),
+        (err: any, r: any[]) => res(r ?? []),
       );
     }).catch(() => []);
 
@@ -174,11 +174,11 @@ async function importFromHealthKit(since: Date): Promise<ImportedWorkout[]> {
         : null;
 
     // Fetch GPS route (Apple Watch workouts include route data via HKWorkoutRoute)
-    const routeSamples: any[] = await new Promise((res) => {
+    const routeSamples: any[] = await new Promise<any[]>((res) => {
       try {
         AppleHealthKit.getWorkoutRouteSamples?.(
           { startDate: w.start, endDate: w.end, id: w.id },
-          (_: unknown, r: any[]) => res(r ?? []),
+          (err: any, r: any[]) => res(r ?? []),
         );
       } catch {
         res([]);

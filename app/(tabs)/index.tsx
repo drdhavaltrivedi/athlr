@@ -12,6 +12,8 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { listActivities } from '@/db/database';
+import { getCommunityFeed } from '@/services/cloudSyncService';
+import { useAuthStore } from '@/store/authStore';
 import { ActivitySummary, SportType } from '@/types';
 import { colors, radii, spacing, type } from '@/theme';
 import {
@@ -45,39 +47,76 @@ export default function ActivitiesScreen() {
   const units = useRecordingStore((s) => s.units);
   const [activities, setActivities] = useState<ActivitySummary[]>([]);
   const [filter, setFilter] = useState('all');
+  const [feedType, setFeedType] = useState<'me' | 'community'>('me');
   const [refreshing, setRefreshing] = useState(false);
+  
+  const { user } = useAuthStore();
 
-  const load = useCallback(async (sport?: string) => {
-    const data = await listActivities(100, sport === 'all' ? undefined : sport).catch(() => []);
+  const load = useCallback(async (currentFeed: 'me' | 'community', sport?: string) => {
+    let data;
+    if (currentFeed === 'me') {
+      data = await listActivities(100, sport === 'all' ? undefined : sport).catch(() => []);
+    } else {
+      data = await getCommunityFeed();
+      if (sport && sport !== 'all') {
+        data = data.filter((a: any) => a.sport === sport);
+      }
+    }
     setActivities(data);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      load(filter);
-    }, [load, filter]),
+      load(feedType, filter);
+    }, [load, filter, feedType]),
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load(filter);
+    await load(feedType, filter);
     setRefreshing(false);
   };
 
   const onFilterChange = (key: string) => {
     setFilter(key);
-    load(key);
+  };
+
+  const onFeedTypeChange = (type: 'me' | 'community') => {
+    if (type === 'community' && !user) {
+      router.push('/auth');
+      return;
+    }
+    setFeedType(type);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      {/* Feed Toggle */}
+      <View style={styles.feedToggleWrap}>
+        <View style={styles.feedToggle}>
+          <Pressable
+            style={[styles.feedToggleBtn, feedType === 'me' && styles.feedToggleBtnActive]}
+            onPress={() => onFeedTypeChange('me')}
+          >
+            <Text style={[styles.feedToggleText, feedType === 'me' && styles.feedToggleTextActive]}>Me</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.feedToggleBtn, feedType === 'community' && styles.feedToggleBtnActive]}
+            onPress={() => onFeedTypeChange('community')}
+          >
+            <Text style={[styles.feedToggleText, feedType === 'community' && styles.feedToggleTextActive]}>Community</Text>
+          </Pressable>
+        </View>
+      </View>
+
       {/* Filter bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterBar}
-        contentContainerStyle={styles.filterBarContent}
-      >
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterBar}
+          contentContainerStyle={styles.filterBarContent}
+        >
         {FILTERS.map((f) => (
           <Pressable
             key={f.key}
@@ -89,7 +128,8 @@ export default function ActivitiesScreen() {
             </Text>
           </Pressable>
         ))}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {/* List */}
       {activities.length === 0 ? (
@@ -140,9 +180,14 @@ function ActivityCard({
           <Ionicons name={SPORT_ICON[item.sport] as never} size={18} color={sportColor} />
         </View>
         <View style={{ flex: 1 }}>
+          {item.userName && (
+            <Text style={[type.caption, { color: sportColor, fontWeight: '600', marginBottom: 2 }]}>
+              {item.userName}
+            </Text>
+          )}
           <Text style={type.title} numberOfLines={1}>{item.title}</Text>
           <Text style={type.caption}>
-            {formatDate(item.startedAt)} · {formatTime(item.startedAt)} · {SPORT_LABEL[item.sport]}
+            {formatDate(item.startedAt)} · {formatTime(item.startedAt)}
           </Text>
         </View>
         {item.visibility === 'private' && (
@@ -224,6 +269,42 @@ const styles = StyleSheet.create({
   },
   filterText: { color: colors.textDim, fontSize: 13, fontWeight: '600' },
   filterTextActive: { color: colors.accent },
+
+  feedToggleWrap: {
+    paddingHorizontal: spacing.m,
+    paddingTop: spacing.m,
+  },
+  feedToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.pill,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  feedToggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: radii.pill,
+  },
+  feedToggleBtnActive: {
+    backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  feedToggleText: {
+    color: colors.textDim,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  feedToggleTextActive: {
+    color: colors.text,
+    fontWeight: '700',
+  },
 
   card: {
     backgroundColor: colors.surface,

@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { Activity, ActivitySummary, DayActivity, WeekStats } from '@/types';
+import { syncActivityToCloud } from '@/services/cloudSyncService';
 
 /**
  * Offline-first storage. Every activity lives on-device in SQLite;
@@ -82,6 +83,11 @@ export async function saveActivity(
     extra?.avgHeartRate ?? null,
     extra?.calories ?? null,
   );
+  
+  // Sync to cloud if visibility is not private
+  if (a.visibility !== 'private') {
+    syncActivityToCloud(a);
+  }
 }
 
 /** Returns true if a workout with the given sourceId is already in the DB. */
@@ -98,9 +104,39 @@ export async function updateTitle(id: string, title: string): Promise<void> {
   await db.runAsync(`UPDATE activities SET title = ? WHERE id = ?`, title, id);
 }
 
-export async function updateVisibility(id: string, visibility: string): Promise<void> {
+export async function updateVisibility(
+  id: string,
+  visibility: 'private' | 'followers' | 'everyone',
+): Promise<void> {
   const db = await getDb();
-  await db.runAsync(`UPDATE activities SET visibility = ? WHERE id = ?`, visibility, id);
+  await db.runAsync(
+    `UPDATE activities SET visibility = ?, synced = 0 WHERE id = ?`,
+    visibility,
+    id,
+  );
+  
+  // Retrieve the full activity to sync it
+  const row = await db.getFirstAsync<any>(
+    `SELECT * FROM activities WHERE id = ?`, id
+  );
+  if (row) {
+    const a: Activity = {
+      id: row.id,
+      sport: row.sport as any,
+      title: row.title,
+      startedAt: row.started_at,
+      endedAt: row.ended_at,
+      elapsedS: row.elapsed_s,
+      movingS: row.moving_s,
+      distanceM: row.distance_m,
+      elevationGainM: row.elevation_gain_m,
+      avgPaceSPerKm: row.avg_pace_s_per_km,
+      visibility: row.visibility as any,
+      points: JSON.parse(row.points_json),
+      splits: JSON.parse(row.splits_json),
+    };
+    syncActivityToCloud(a);
+  }
 }
 
 export async function deleteActivity(id: string): Promise<void> {

@@ -44,13 +44,11 @@ export const type = {
     fontSize: 64,
     fontWeight: '800' as const,
     letterSpacing: -2,
-    fontVariant: ['tabular-nums'] as const,
     color: colors.text,
   },
   statSmall: {
     fontSize: 28,
     fontWeight: '700' as const,
-    fontVariant: ['tabular-nums'] as const,
     color: colors.text,
   },
   label: {
