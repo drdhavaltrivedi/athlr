@@ -107,7 +107,7 @@ export default function EditProfileScreen() {
         displayName: displayName.trim(),
         username: cleanUsername,
         bio: bio.trim(),
-        photoURL: finalPhotoURL || undefined,
+        photoURL: finalPhotoURL || null,
       });
 
       router.back();

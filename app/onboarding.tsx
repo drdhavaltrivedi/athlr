@@ -102,7 +102,7 @@ export default function OnboardingScreen() {
       // 4. Update Firestore user document
       await updateUserProfile(user.uid, {
         username: cleanUsername,
-        photoURL: finalPhotoURL || undefined,
+        photoURL: finalPhotoURL || null,
       });
 
       // 5. Navigate to app
