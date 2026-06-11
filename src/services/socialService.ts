@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, deleteDoc, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, getDocs, query, where, getDoc, orderBy, limit } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 
 export interface UserProfile {
@@ -94,6 +94,48 @@ export async function getFollowingIds(): Promise<string[]> {
     return snapshot.docs.map(doc => doc.id);
   } catch (err) {
     console.error('Failed to get following IDs:', err);
+    return [];
+  }
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (!userDoc.exists()) return null;
+    
+    const data = userDoc.data();
+    let isFollowing = false;
+    if (auth.currentUser) {
+      const followingDoc = await getDoc(doc(db, 'users', auth.currentUser.uid, 'following', uid));
+      isFollowing = followingDoc.exists();
+    }
+    
+    return {
+      uid: userDoc.id,
+      displayName: data.displayName || 'Unknown Athlete',
+      email: data.email,
+      isFollowing,
+    };
+  } catch (err) {
+    console.error('Failed to get user profile:', err);
+    return null;
+  }
+}
+
+export async function getUserActivities(uid: string, maxCount: number = 20): Promise<any[]> {
+  try {
+    const q = query(
+      collection(db, 'activities'),
+      where('uid', '==', uid),
+      where('visibility', '!=', 'private'),
+      orderBy('visibility'), // required by firestore when combining where(!=) and orderBy
+      orderBy('startedAt', 'desc'),
+      limit(maxCount)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (err) {
+    console.error('Failed to get user activities:', err);
     return [];
   }
 }

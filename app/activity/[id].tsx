@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Pressable,
   ScrollView,
   Share,
@@ -9,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import MapView, { Polyline, PROVIDER_DEFAULT, LocalTile } from 'react-native-maps';
+import { LineChart } from 'react-native-chart-kit';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { captureRef } from 'react-native-view-shot';
@@ -240,6 +242,110 @@ export default function ActivityDetailScreen() {
             <StatTile label={`Avg Pace · ${paceUnit(units)}`} value={formatPace(activity.avgPaceSPerKm, units)} color={sportColor} />
             <StatTile label="Elevation · m" value={String(activity.elevationGainM)} color={sportColor} />
           </View>
+
+          {/* Charts */}
+          {activity.points && activity.points.length > 10 && (
+            <View style={styles.chartsContainer}>
+              <Text style={[type.h3, { marginBottom: spacing.m }]}>Elevation & Pace</Text>
+              
+              {/* Elevation Chart */}
+              <LineChart
+                data={{
+                  labels: [],
+                  datasets: [{
+                    data: (() => {
+                      const pts = activity.points;
+                      const step = Math.max(1, Math.floor(pts.length / 50));
+                      const downsamp = pts.filter((_, i) => i % step === 0 && pts[i].altitude != null);
+                      return downsamp.length > 0 ? downsamp.map(p => p.altitude!) : [0, 0];
+                    })()
+                  }]
+                }}
+                width={Dimensions.get("window").width - spacing.l * 2}
+                height={180}
+                withDots={false}
+                withInnerLines={false}
+                chartConfig={{
+                  backgroundColor: colors.surface,
+                  backgroundGradientFrom: colors.surface,
+                  backgroundGradientTo: colors.surface,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(130, 255, 130, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  propsForBackgroundLines: { strokeWidth: 0 },
+                }}
+                bezier
+                style={{ borderRadius: radii.l, marginBottom: spacing.l }}
+              />
+
+              {/* Pace Chart */}
+              <LineChart
+                data={{
+                  labels: [],
+                  datasets: [{
+                    data: (() => {
+                      const pts = activity.points;
+                      const step = Math.max(1, Math.floor(pts.length / 50));
+                      const downsamp = pts.filter((_, i) => i % step === 0);
+                      // Calculate pace between downsampled points
+                      const paces = [];
+                      for(let i = 1; i < downsamp.length; i++) {
+                        const p1 = downsamp[i-1];
+                        const p2 = downsamp[i];
+                        const dt = (p2.timestamp - p1.timestamp) / 1000;
+                        if(dt <= 0) { paces.push(paces[paces.length-1]||0); continue; }
+                        
+                        // Rough distance
+                        const dLat = (p2.latitude - p1.latitude) * Math.PI / 180;
+                        const dLon = (p2.longitude - p1.longitude) * Math.PI / 180;
+                        const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(p1.latitude*Math.PI/180)*Math.cos(p2.latitude*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                        const distM = 6371e3 * c;
+                        
+                        if(distM < 1) { paces.push(paces[paces.length-1]||0); continue; }
+                        
+                        const speed = distM / dt; // m/s
+                        // Pace in sec/km
+                        const paceSecKm = 1000 / speed;
+                        // Cap pace for chart readability (e.g., max 15 min/km = 900s)
+                        paces.push(Math.min(paceSecKm, 900));
+                      }
+                      
+                      // Moving average smoothing (window size 3)
+                      const smoothed = paces.map((val, idx, arr) => {
+                        const start = Math.max(0, idx - 1);
+                        const end = Math.min(arr.length - 1, idx + 1);
+                        let sum = 0;
+                        for(let j=start; j<=end; j++) sum += arr[j];
+                        return sum / (end - start + 1);
+                      });
+                      
+                      // Inverse the chart because lower pace (faster) is "better"/higher
+                      const maxPace = Math.max(...(smoothed.length ? smoothed : [1000]));
+                      return smoothed.length > 0 ? smoothed.map(p => maxPace - p) : [0, 0];
+                    })()
+                  }]
+                }}
+                width={Dimensions.get("window").width - spacing.l * 2}
+                height={180}
+                withDots={false}
+                withInnerLines={false}
+                yAxisLabel="-"
+                formatYLabel={() => ""} // Hide raw values since it's inverted
+                chartConfig={{
+                  backgroundColor: colors.surface,
+                  backgroundGradientFrom: colors.surface,
+                  backgroundGradientTo: colors.surface,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(130, 180, 255, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  propsForBackgroundLines: { strokeWidth: 0 },
+                }}
+                bezier
+                style={{ borderRadius: radii.l }}
+              />
+            </View>
+          )}
 
           {/* Splits */}
           {activity.splits.length > 0 && (

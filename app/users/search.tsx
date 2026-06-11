@@ -84,7 +84,10 @@ export default function UserSearchScreen() {
             keyExtractor={item => item.uid}
             contentContainerStyle={styles.listContent}
             renderItem={({ item }) => (
-              <View style={styles.userRow}>
+              <Pressable 
+                style={styles.userRow}
+                onPress={() => router.push(`/users/${item.uid}`)}
+              >
                 <View style={styles.avatar}>
                   <Text style={styles.avatarText}>{item.displayName[0]?.toUpperCase()}</Text>
                 </View>
@@ -100,7 +103,7 @@ export default function UserSearchScreen() {
                     {item.isFollowing ? 'Following' : 'Follow'}
                   </Text>
                 </Pressable>
-              </View>
+              </Pressable>
             )}
             ListEmptyComponent={
               query.trim().length > 1 && !loading ? (
