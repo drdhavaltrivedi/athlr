@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -38,6 +39,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Sync local display name with firebase if creating account
   const localDisplayName = useRecordingStore((s) => s.displayName);
@@ -86,6 +88,7 @@ export default function AuthScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
     try {
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
@@ -121,6 +124,8 @@ export default function AuthScreen() {
       if (error.code !== 'SIGN_IN_CANCELLED') {
         Alert.alert('Google Sign-In Failed', error.message);
       }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -195,11 +200,19 @@ export default function AuthScreen() {
           <View style={styles.line} />
         </View>
 
-        <Pressable
-          style={styles.googleBtn}
+        <Pressable 
+          style={[styles.btn, styles.googleBtn]}
           onPress={handleGoogleSignIn}
+          disabled={loading || googleLoading}
         >
-          <Text style={styles.googleBtnText}>Continue with Google</Text>
+          {googleLoading ? (
+            <ActivityIndicator color={colors.text} />
+          ) : (
+            <>
+              <Ionicons name="logo-google" size={20} color={colors.text} />
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
+            </>
+          )}
         </Pressable>
       </View>
     </KeyboardAvoidingView>
