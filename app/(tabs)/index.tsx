@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Alert,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -83,7 +84,14 @@ export default function ActivitiesScreen() {
 
   const onFeedTypeChange = (type: 'me' | 'community') => {
     if (type === 'community' && !user) {
-      router.push('/auth');
+      Alert.alert(
+        'Login Required',
+        'You must be logged in to view the community feed.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Log In', onPress: () => router.push('/auth') },
+        ]
+      );
       return;
     }
     setFeedType(type);
