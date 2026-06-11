@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Refresh
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Challenge } from '@/types';
-import { getActiveChallenges, seedSampleChallenges } from '@/services/challengeService';
+import { getActiveChallenges, seedSampleChallenges, fallbackChallenges } from '@/services/challengeService';
+import { withTimeout } from '@/utils/async';
 import { colors, radii, spacing, type } from '@/theme';
 
 export default function ChallengesScreen() {
@@ -14,45 +15,16 @@ export default function ChallengesScreen() {
 
   const loadChallenges = async () => {
     try {
-      let data = await getActiveChallenges();
-      if (data.length === 0) {
-        await seedSampleChallenges();
-        data = await getActiveChallenges();
+      // One bounded fetch — never leave the user staring at a spinner
+      const data = await withTimeout(getActiveChallenges(), 8000).catch(() => [] as Challenge[]);
+      if (data.length > 0) {
+        setChallenges(data);
+      } else {
+        // Show fallback content immediately; seed Firestore in the background
+        // so the real list is there on the next visit.
+        setChallenges(fallbackChallenges());
+        seedSampleChallenges().catch(() => {});
       }
-      
-      // Fallback to in-memory mock data if Firestore fails due to rules or network
-      if (data.length === 0) {
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-        const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
-        data = [
-          {
-            id: 'june-100k-run',
-            title: 'Monthly 100km Run',
-            description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.',
-            type: 'distance',
-            sport: 'running',
-            targetValue: 100000,
-            startDate: startOfMonth,
-            endDate: endOfMonth,
-            participantCount: 0,
-          },
-          {
-            id: 'summer-elevation',
-            title: 'Summer Elevation Challenge',
-            description: 'Climb a total of 5,000 meters this month across any sport.',
-            type: 'elevation',
-            sport: 'all',
-            targetValue: 5000,
-            startDate: startOfMonth,
-            endDate: endOfMonth,
-            participantCount: 0,
-          }
-        ];
-      }
-      
-      setChallenges(data);
-    } catch (err) {
-      console.warn('Could not load challenges:', err);
     } finally {
       setLoading(false);
     }
@@ -142,7 +114,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.l,
+    borderRadius: radii.card,
     padding: spacing.l,
     marginBottom: spacing.l,
     borderWidth: 1,
@@ -172,6 +144,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
     paddingHorizontal: spacing.s,
     paddingVertical: 4,
-    borderRadius: radii.s,
+    borderRadius: 8,
   },
 });

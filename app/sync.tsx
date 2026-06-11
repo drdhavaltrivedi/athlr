@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -69,17 +70,38 @@ export default function SyncScreen() {
 
   const onConnect = async () => {
     setSyncState('connecting');
+    // On the first ever call iOS presents the Health permission sheet
+    // directly in-app. On later calls it resolves silently — iOS never
+    // re-shows the sheet, so denied access must be fixed in the Health app.
     const granted = await requestPermissions();
     const updated = getStatus();
     setStatus(updated);
     if (!granted) {
       setSyncState('error');
-      setErrorMsg(
-        `Permission denied. Open your phone's Settings → Privacy → Health and enable Athlr.`,
-      );
+      if (!updated.available) {
+        setErrorMsg(
+          updated.reason ??
+            'The Health module is not part of this build. Rebuild the app to enable health sync.',
+        );
+      } else {
+        setErrorMsg(
+          Platform.OS === 'ios'
+            ? 'Athlr needs Health access. Tap "Open Health" below, go to Sharing → Apps → Athlr, and turn everything on.'
+            : updated.reason ?? 'Health Connect permission was not granted. Tap "Open Settings" to grant access.',
+        );
+      }
       return;
     }
     fetchWorkouts();
+  };
+
+  const openHealthSettings = () => {
+    if (Platform.OS === 'ios') {
+      // Opens the Health app (Sharing → Apps → Athlr toggles live there)
+      Linking.openURL('x-apple-health://').catch(() => Linking.openSettings());
+    } else {
+      Linking.openSettings();
+    }
   };
 
   const fetchWorkouts = async () => {
@@ -212,8 +234,24 @@ export default function SyncScreen() {
       {/* Error */}
       {syncState === 'error' && (
         <View style={styles.errorBanner}>
-          <Ionicons name="alert-circle" size={18} color={colors.danger} />
-          <Text style={[type.caption, { color: colors.danger, flex: 1 }]}>{errorMsg}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
+            <Ionicons name="alert-circle" size={18} color={colors.danger} />
+            <Text style={[type.caption, { color: colors.danger, flex: 1 }]}>{errorMsg}</Text>
+          </View>
+          {status?.available && (
+            <View style={{ flexDirection: 'row', gap: spacing.s, marginTop: spacing.s }}>
+              <Pressable style={styles.errorAction} onPress={openHealthSettings}>
+                <Ionicons name={Platform.OS === 'ios' ? 'heart' : 'settings'} size={14} color={colors.text} />
+                <Text style={styles.errorActionText}>
+                  {Platform.OS === 'ios' ? 'Open Health' : 'Open Settings'}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.errorAction} onPress={onConnect}>
+                <Ionicons name="refresh" size={14} color={colors.text} />
+                <Text style={styles.errorActionText}>Try again</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
 
@@ -450,9 +488,6 @@ const styles = StyleSheet.create({
     borderColor: colors.live + '66',
   },
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.s,
     margin: spacing.m,
     marginBottom: 0,
     backgroundColor: colors.danger + '22',
@@ -460,6 +495,22 @@ const styles = StyleSheet.create({
     padding: spacing.m,
     borderWidth: 1,
     borderColor: colors.danger + '66',
+  },
+  errorAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.m,
+    paddingVertical: 6,
+  },
+  errorActionText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   loadingRow: {
     flexDirection: 'row',

@@ -20,6 +20,7 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   getAdditionalUserInfo,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { doc, setDoc } from 'firebase/firestore';
@@ -65,6 +66,7 @@ export default function AuthScreen() {
         // Run profile updates in the background to make signup feel instantaneous
         Promise.all([
           updateProfile(cred.user, { displayName }),
+          sendEmailVerification(cred.user),
           setDoc(doc(db, 'users', cred.user.uid), {
             displayName,
             createdAt: Date.now(),

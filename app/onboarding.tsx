@@ -86,10 +86,15 @@ export default function OnboardingScreen() {
         finalPhotoURL = await getDownloadURL(storageRef);
       }
 
-      // 2. Check username uniqueness
+      // 2. Check username uniqueness (null = couldn't verify due to network)
       const isUnique = await checkUsernameUnique(cleanUsername, user.uid);
-      if (!isUnique) {
+      if (isUnique === false) {
         Alert.alert('Taken', 'That username is already taken. Please try another one.');
+        setSaving(false);
+        return;
+      }
+      if (isUnique === null) {
+        Alert.alert('Connection problem', 'Could not verify the username. Please check your internet and try again.');
         setSaving(false);
         return;
       }

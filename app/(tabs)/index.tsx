@@ -53,11 +53,15 @@ export default function ActivitiesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   const { user } = useAuthStore();
+  const localDisplayName = useRecordingStore((s) => s.displayName);
+  // Local activities have no userName column — stamp the owner's name on them
+  const myName = user?.displayName || localDisplayName || 'You';
 
   const load = useCallback(async (currentFeed: 'me' | 'community', sport?: string) => {
     let data;
     if (currentFeed === 'me') {
-      data = await listActivities(100, sport === 'all' ? undefined : sport).catch(() => []);
+      const rows = await listActivities(100, sport === 'all' ? undefined : sport).catch(() => []);
+      data = rows.map((a) => ({ ...a, userName: a.userName ?? myName, uid: a.uid ?? user?.uid }));
     } else {
       data = await getCommunityFeed();
       if (sport && sport !== 'all') {
@@ -65,7 +69,7 @@ export default function ActivitiesScreen() {
       }
     }
     setActivities(data);
-  }, []);
+  }, [myName, user?.uid]);
 
   useFocusEffect(
     useCallback(() => {

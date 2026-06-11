@@ -125,12 +125,28 @@ const HK_PERMISSIONS = {
 };
 
 let hkInitialized = false;
+let _lastError: string | null = null;
+
+export function getLastHealthError(): string | null {
+  return _lastError;
+}
 
 async function initializeHK(): Promise<boolean> {
-  if (!AppleHealthKit || typeof AppleHealthKit.initHealthKit !== 'function') return false;
+  if (!AppleHealthKit || typeof AppleHealthKit.initHealthKit !== 'function') {
+    _lastError =
+      'The Apple Health module is not part of this build. Rebuild the app with `npx expo run:ios`.';
+    return false;
+  }
+  // initHealthKit presents the iOS permission sheet on first call;
+  // on later calls it resolves silently (iOS never re-shows the sheet).
   return new Promise((resolve) => {
     AppleHealthKit.initHealthKit(HK_PERMISSIONS, (err: unknown) => {
-      if (err) { resolve(false); return; }
+      if (err) {
+        _lastError = typeof err === 'string' ? err : (err as Error)?.message ?? String(err);
+        resolve(false);
+        return;
+      }
+      _lastError = null;
       hkInitialized = true;
       resolve(true);
     });
@@ -358,6 +374,8 @@ export interface HealthServiceStatus {
   available: boolean;
   platform: 'ios' | 'android' | 'none';
   authorized: boolean;
+  /** Human-readable reason when authorization failed (module missing, init error…). */
+  reason?: string;
 }
 
 let _status: HealthServiceStatus = {
@@ -369,10 +387,10 @@ let _status: HealthServiceStatus = {
 export async function initialize(): Promise<HealthServiceStatus> {
   if (Platform.OS === 'ios') {
     const ok = await initializeHK();
-    _status = { available: !!AppleHealthKit, platform: 'ios', authorized: ok };
+    _status = { available: !!AppleHealthKit, platform: 'ios', authorized: ok, reason: _lastError ?? undefined };
   } else if (Platform.OS === 'android') {
     const ok = await initializeHC();
-    _status = { available: !!HC, platform: 'android', authorized: ok };
+    _status = { available: !!HC, platform: 'android', authorized: ok, reason: _lastError ?? undefined };
   }
   return _status;
 }

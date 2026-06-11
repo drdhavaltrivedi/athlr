@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -34,7 +35,6 @@ export default function ProfileScreen() {
   const units = useRecordingStore((s) => s.units);
   const setUnits = useRecordingStore((s) => s.setUnits);
   const displayName = useRecordingStore((s) => s.displayName);
-  const setDisplayName = useRecordingStore((s) => s.setDisplayName);
 
   const { user } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -48,146 +48,176 @@ export default function ProfileScreen() {
     }, [user]),
   );
 
-  const initials = profile?.displayName || user?.displayName || displayName
-    ? (profile?.displayName || user?.displayName || displayName)!.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+  const name = profile?.displayName || user?.displayName || displayName;
+  const photoURL = profile?.photoURL || user?.photoURL;
+  const initials = name
+    ? name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
+
+  const onSignOut = () => {
+    Alert.alert('Sign out?', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign Out', style: 'destructive', onPress: () => signOut(auth) },
+    ]);
+  };
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ padding: spacing.m, gap: spacing.m }}
+      contentContainerStyle={{ paddingBottom: spacing.xl }}
+      showsVerticalScrollIndicator={false}
     >
-      {/* Avatar + name card */}
-      <View style={styles.profileCard}>
-        <Pressable style={styles.avatar} onPress={user ? () => router.push('/users/edit') : () => router.push('/auth')}>
-          {profile?.photoURL || user?.photoURL ? (
-             <View style={[StyleSheet.absoluteFill, { borderRadius: 32, overflow: 'hidden' }]}>
-               <View style={{ width: '100%', height: '100%', backgroundColor: colors.surfaceAlt }}>
-                 <Ionicons name="person" size={24} color={colors.textDim} style={{ position: 'absolute', top: 20, left: 20 }} />
-                 <Text style={{ position: 'absolute', opacity: 0 }}>{profile?.photoURL || user?.photoURL}</Text>
-               </View>
-             </View>
+      {/* ─── Hero ──────────────────────────────────────────────────────── */}
+      <View style={styles.hero}>
+        <Pressable
+          style={styles.avatarRing}
+          onPress={() => router.push(user ? '/users/edit' : '/auth')}
+        >
+          {photoURL ? (
+            <Image source={{ uri: photoURL }} style={styles.avatarImage} />
           ) : (
-            <Text style={styles.avatarText}>{initials}</Text>
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
           )}
         </Pressable>
-        <View style={{ flex: 1 }}>
-          <Pressable onPress={user ? undefined : () => router.push('/auth')}>
-            <Text style={type.title}>
-              {profile?.displayName || user?.displayName || displayName || 'Tap to sign in'}
-            </Text>
+
+        {user ? (
+          <>
+            <Text style={styles.heroName}>{name || 'Athlete'}</Text>
             <Text style={type.caption}>
-              {profile?.username ? `@${profile.username}` : (user?.email || 'Athlr athlete')}
+              {profile?.username ? `@${profile.username}` : user.email}
             </Text>
             {profile?.bio ? (
-              <Text style={[type.body, { marginTop: spacing.xs, color: colors.textDim }]}>{profile.bio}</Text>
+              <Text style={styles.heroBio}>{profile.bio}</Text>
             ) : null}
-          </Pressable>
-        </View>
+
+            <View style={styles.heroActions}>
+              <Pressable style={styles.editBtn} onPress={() => router.push('/users/edit')}>
+                <Ionicons name="pencil" size={14} color={colors.accent} />
+                <Text style={styles.editBtnText}>Edit Profile</Text>
+              </Pressable>
+              <Pressable style={styles.signOutBtn} onPress={onSignOut}>
+                <Ionicons name="log-out-outline" size={14} color={colors.textDim} />
+                <Text style={styles.signOutText}>Sign out</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.heroName}>{name || 'Welcome to Athlr'}</Text>
+            <Text style={[type.caption, { textAlign: 'center' }]}>
+              Sign in to join challenges, follow athletes{'\n'}and back up your profile.
+            </Text>
+            <Pressable style={styles.loginBtn} onPress={() => router.push('/auth')}>
+              <Text style={styles.loginBtnText}>Log In or Sign Up</Text>
+            </Pressable>
+          </>
+        )}
       </View>
 
-      {user && (
-        <View style={styles.actionRow}>
-          <Pressable style={styles.editBtn} onPress={() => router.push('/users/edit')}>
-            <Text style={styles.editBtnText}>Edit Profile</Text>
-          </Pressable>
-          <Pressable onPress={() => signOut(auth)} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={20} color={colors.textDim} />
-          </Pressable>
-        </View>
-      )}
+      <View style={{ paddingHorizontal: spacing.m, gap: spacing.m }}>
+        {/* ─── All-time stats — distance is the hero ─────────────────────── */}
+        <View style={styles.card}>
+          <Text style={type.label}>All Time</Text>
 
-      {!user && (
-        <View style={styles.actionRow}>
-          <Pressable onPress={() => router.push('/auth')} style={styles.loginBtn}>
-            <Text style={styles.loginBtnText}>Log In</Text>
-          </Pressable>
-        </View>
-      )}
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>
+              {formatDistance(stats.distanceM, units, 1)}
+            </Text>
+            <Text style={type.label}>{`Distance · ${distanceUnit(units)}`}</Text>
+          </View>
 
-      {/* Lifetime stats */}
-      <View style={styles.card}>
-        <Text style={type.label}>All Time</Text>
-        <View style={styles.grid}>
-          <BigStat label="Activities" value={String(stats.count)} />
-          <BigStat label={`Distance · ${distanceUnit(units)}`} value={formatDistance(stats.distanceM, units, 1)} />
-          <BigStat label="Moving Time" value={formatDuration(stats.movingS)} />
-          <BigStat label="Elevation · m" value={String(Math.round(stats.elevationGainM))} />
+          <View style={styles.statRow}>
+            <MiniStat icon="flame" label="Activities" value={String(stats.count)} />
+            <View style={styles.statDivider} />
+            <MiniStat icon="time" label="Moving Time" value={formatDuration(stats.movingS)} />
+            <View style={styles.statDivider} />
+            <MiniStat icon="trending-up" label="Elev · m" value={String(Math.round(stats.elevationGainM))} />
+          </View>
         </View>
-      </View>
 
-      {/* Connect Health */}
-      <Pressable style={[styles.card, styles.healthCard]} onPress={() => router.push('/sync')}>
-        <View style={styles.healthIconWrap}>
-          <Ionicons name="heart-circle" size={24} color="#FF2D55" />
+        {/* ─── Connect Health ─────────────────────────────────────────────── */}
+        <Pressable style={[styles.card, styles.healthCard]} onPress={() => router.push('/sync')}>
+          <View style={styles.healthIconWrap}>
+            <Ionicons name="heart" size={20} color="#FF2D55" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={type.h3}>Connect Health Data</Text>
+            <Text style={type.caption}>Apple Health, Google Fit, Garmin & more</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+        </Pressable>
+
+        {/* ─── Preferences ────────────────────────────────────────────────── */}
+        <View style={styles.card}>
+          <Text style={type.label}>Preferences</Text>
+
+          <SettingRow
+            icon="speedometer"
+            iconColor={colors.accent}
+            title="Units"
+            right={
+              <View style={styles.segment}>
+                <SegmentButton label="km" value="km" current={units} onPress={setUnits} />
+                <SegmentButton label="mi" value="mi" current={units} onPress={setUnits} />
+              </View>
+            }
+          />
+
+          <View style={styles.rowDivider} />
+
+          <SettingRow
+            icon="pause-circle"
+            iconColor={colors.live}
+            title="Auto-pause"
+            subtitle="Pause the clock when you stop moving"
+            right={
+              <Switch
+                value={autoPause}
+                onValueChange={setAutoPause}
+                trackColor={{ true: colors.accent, false: colors.surfaceAlt }}
+                thumbColor={colors.text}
+              />
+            }
+          />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={type.title}>Connect Health Data</Text>
-          <Text style={type.caption}>Import from Apple Health, Google Fit, Apple Watch, Garmin &amp; more</Text>
+
+        {/* ─── Privacy promise ────────────────────────────────────────────── */}
+        <View style={[styles.card, styles.promiseCard]}>
+          <View style={styles.promiseHeader}>
+            <Ionicons name="shield-checkmark" size={16} color={colors.live} />
+            <Text style={[type.label, { color: colors.live }]}>Our promise</Text>
+          </View>
+          <Text style={[type.caption, { lineHeight: 19 }]}>
+            Activities are private by default. Your data stays on this device
+            until you choose to share it — export everything as GPX any time,
+            free, forever.
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-      </Pressable>
 
-      {/* Units preference */}
-      <View style={styles.card}>
-        <Text style={type.label}>Units</Text>
-        <View style={styles.unitsRow}>
-          <UnitButton label="Kilometres" value="km" current={units} onPress={setUnits} />
-          <UnitButton label="Miles" value="mi" current={units} onPress={setUnits} />
-        </View>
-      </View>
-
-      {/* Recording settings */}
-      <View style={styles.card}>
-        <Text style={type.label}>Recording</Text>
-
-        <SettingRow
-          title="Auto-pause"
-          subtitle="Pause the clock when you stop moving"
-          right={
-            <Switch
-              value={autoPause}
-              onValueChange={setAutoPause}
-              trackColor={{ true: colors.accent, false: colors.surfaceAlt }}
-              thumbColor={colors.text}
-            />
-          }
-        />
-      </View>
-
-      {/* Privacy promise */}
-      <View style={styles.card}>
-        <View style={styles.promiseHeader}>
-          <Ionicons name="shield-checkmark" size={18} color={colors.live} />
-          <Text style={[type.label, { color: colors.live }]}>Our promise</Text>
-        </View>
-        <Text style={[type.body, { marginTop: spacing.s }]}>
-          Activities are private by default. Your data stays on this device
-          until you choose to share it, and you can export everything as GPX
-          any time — free, forever.
+        {/* ─── App version ────────────────────────────────────────────────── */}
+        <Text style={[type.caption, { textAlign: 'center' }]}>
+          Athlr v0.1.0 · Built with ❤️
         </Text>
       </View>
-
-      {/* App version */}
-      <Text style={[type.caption, { textAlign: 'center', paddingBottom: spacing.m }]}>
-        Athlr v0.1.0 · Built with ❤️
-      </Text>
     </ScrollView>
   );
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function BigStat({ label, value }: { label: string; value: string }) {
+function MiniStat({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <View style={styles.gridItem}>
-      <Text style={type.label}>{label}</Text>
-      <Text style={styles.bigValue}>{value}</Text>
+    <View style={styles.miniStat}>
+      <Ionicons name={icon as never} size={14} color={colors.accent} />
+      <Text style={styles.miniStatValue}>{value}</Text>
+      <Text style={styles.miniStatLabel}>{label}</Text>
     </View>
   );
 }
 
-function UnitButton({
+function SegmentButton({
   label, value, current, onPress,
 }: {
   label: string; value: Units; current: Units; onPress: (v: Units) => void;
@@ -195,10 +225,10 @@ function UnitButton({
   const active = value === current;
   return (
     <Pressable
-      style={[styles.unitBtn, active && styles.unitBtnActive]}
+      style={[styles.segmentBtn, active && styles.segmentBtnActive]}
       onPress={() => onPress(value)}
     >
-      <Text style={[styles.unitBtnText, active && styles.unitBtnTextActive]}>
+      <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
         {label}
       </Text>
     </Pressable>
@@ -206,15 +236,18 @@ function UnitButton({
 }
 
 function SettingRow({
-  title, subtitle, right,
+  icon, iconColor, title, subtitle, right,
 }: {
-  title: string; subtitle: string; right: React.ReactNode;
+  icon: string; iconColor: string; title: string; subtitle?: string; right: React.ReactNode;
 }) {
   return (
     <View style={styles.settingRow}>
+      <View style={[styles.settingIcon, { backgroundColor: iconColor + '22' }]}>
+        <Ionicons name={icon as never} size={16} color={iconColor} />
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={type.body}>{title}</Text>
-        <Text style={type.caption}>{subtitle}</Text>
+        {subtitle ? <Text style={type.caption}>{subtitle}</Text> : null}
       </View>
       {right}
     </View>
@@ -223,68 +256,106 @@ function SettingRow({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+const AVATAR_SIZE = 84;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
-  profileCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.card,
-    padding: spacing.m,
-    borderWidth: 1,
-    borderColor: colors.border,
-    flexDirection: 'row',
+  hero: {
     alignItems: 'center',
-    gap: spacing.m,
+    paddingTop: spacing.l,
+    paddingBottom: spacing.l,
+    paddingHorizontal: spacing.l,
+    gap: spacing.xs,
   },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.accent + '33',
-    borderWidth: 2,
+  avatarRing: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 2.5,
     borderColor: colors.accent,
+    padding: 3,
+    marginBottom: spacing.s,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: AVATAR_SIZE / 2,
+    backgroundColor: colors.surfaceAlt,
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: AVATAR_SIZE / 2,
+    backgroundColor: colors.accent + '26',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     color: colors.accent,
-    fontSize: 22,
+    fontSize: 30,
     fontWeight: '800',
   },
-  actionRow: {
+  heroName: {
+    ...type.h2,
+    marginTop: spacing.xs,
+  },
+  heroBio: {
+    ...type.caption,
+    color: colors.text,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    maxWidth: 280,
+  },
+  heroActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.m,
+    gap: spacing.s,
+    marginTop: spacing.m,
   },
   editBtn: {
-    backgroundColor: colors.surfaceAlt,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.accent + '1A',
+    borderWidth: 1,
+    borderColor: colors.accent,
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.s,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   editBtnText: {
-    color: colors.text,
+    color: colors.accent,
     fontWeight: '700',
     fontSize: 14,
   },
-  loginBtn: {
-    backgroundColor: colors.surfaceAlt,
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
+  },
+  signOutText: {
+    color: colors.textDim,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  loginBtn: {
+    backgroundColor: colors.accent,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.m,
+    borderRadius: radii.pill,
+    marginTop: spacing.m,
   },
   loginBtnText: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  logoutBtn: {
-    padding: spacing.s,
+    color: colors.bg,
+    fontWeight: '800',
+    fontSize: 15,
+    letterSpacing: 0.3,
   },
 
   card: {
@@ -295,53 +366,104 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.m,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  gridItem: { width: '50%', marginBottom: spacing.m },
-  bigValue: {
-    fontSize: 24,
+
+  heroStat: { alignItems: 'center', gap: 2 },
+  heroStatValue: {
+    fontSize: 44,
+    fontWeight: '800',
+    letterSpacing: -1.5,
+    color: colors.accent,
+    fontVariant: ['tabular-nums'],
+  },
+  statRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.m,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: colors.border,
+  },
+  miniStat: { flex: 1, alignItems: 'center', gap: 3 },
+  miniStatValue: {
+    fontSize: 17,
     fontWeight: '800',
     color: colors.text,
     fontVariant: ['tabular-nums'],
-    marginTop: 2,
+  },
+  miniStatLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.textDim,
   },
 
-  unitsRow: { flexDirection: 'row', gap: spacing.m },
-  unitBtn: {
-    flex: 1,
-    paddingVertical: spacing.m,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+  healthCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceAlt,
+    gap: spacing.m,
+    borderColor: '#FF2D5544',
+    backgroundColor: '#FF2D5508',
   },
-  unitBtnActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent + '22',
+  healthIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FF2D5522',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  unitBtnText: { color: colors.textDim, fontWeight: '700' },
-  unitBtnTextActive: { color: colors.accent },
 
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.m,
   },
-  promiseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.s },
-
-  healthCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderColor: '#FF2D5544',
-    backgroundColor: '#FF2D5508',
-  },
-  healthIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FF2D5522',
+  settingIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.s,
   },
+  rowDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: 32 + spacing.m,
+  },
+
+  segment: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.pill,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  segmentBtn: {
+    paddingHorizontal: spacing.m,
+    paddingVertical: 5,
+    borderRadius: radii.pill,
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.accent,
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textDim,
+  },
+  segmentTextActive: {
+    color: colors.bg,
+  },
+
+  promiseCard: {
+    gap: spacing.s,
+    borderColor: colors.live + '33',
+  },
+  promiseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.s },
 });

@@ -5,18 +5,19 @@ export interface UserProfile {
   uid: string;
   displayName: string;
   email?: string;
-  photoURL?: string;
+  photoURL?: string | null;
   username?: string;
   bio?: string;
   isFollowing?: boolean;
 }
 
-export async function checkUsernameUnique(username: string, currentUid: string): Promise<boolean> {
+/** true = available, false = taken, null = network error (couldn't verify). */
+export async function checkUsernameUnique(username: string, currentUid: string): Promise<boolean | null> {
   try {
     const q = query(collection(db, 'users'), where('username', '==', username));
     const snapshot = await getDocs(q);
     if (snapshot.empty) return true;
-    
+
     // If it's taken but it's our own document, it's fine
     let isOurs = true;
     snapshot.forEach(d => {
@@ -25,7 +26,7 @@ export async function checkUsernameUnique(username: string, currentUid: string):
     return isOurs;
   } catch (err) {
     console.warn('Failed to check username:', err);
-    return false; // fail safe
+    return null;
   }
 }
 
@@ -134,16 +135,20 @@ export async function getFollowingIds(): Promise<string[]> {
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
-    const userDoc = await getDoc(doc(db, 'users', uid));
+    const me = auth.currentUser;
+    // No follow check needed for your own profile; otherwise fetch in parallel
+    const needsFollowCheck = !!me && me.uid !== uid;
+    const [userDoc, followingDoc] = await Promise.all([
+      getDoc(doc(db, 'users', uid)),
+      needsFollowCheck
+        ? getDoc(doc(db, 'users', me!.uid, 'following', uid))
+        : Promise.resolve(null),
+    ]);
     if (!userDoc.exists()) return null;
-    
+
     const data = userDoc.data();
-    let isFollowing = false;
-    if (auth.currentUser) {
-      const followingDoc = await getDoc(doc(db, 'users', auth.currentUser.uid, 'following', uid));
-      isFollowing = followingDoc.exists();
-    }
-    
+    const isFollowing = followingDoc?.exists() ?? false;
+
     return {
       uid: userDoc.id,
       displayName: data.displayName || 'Unknown Athlete',

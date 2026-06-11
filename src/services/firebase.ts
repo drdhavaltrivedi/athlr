@@ -4,7 +4,7 @@ import {
   // @ts-ignore
   getReactNativePersistence,
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,5 +25,9 @@ export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
 
-export const db = getFirestore(app);
+// React Native's network stack breaks Firestore's default WebChannel streaming
+// (reads/writes hang for 10-30s or never settle). Long polling is reliable in RN.
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+});
 export const storage = getStorage(app);

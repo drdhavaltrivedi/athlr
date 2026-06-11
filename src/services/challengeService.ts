@@ -2,6 +2,36 @@ import { collection, doc, setDoc, getDocs, getDoc, query, where, orderBy, increm
 import { db, auth } from '@/services/firebase';
 import { Challenge, ChallengeParticipant, Activity } from '@/types';
 
+/** In-memory fallback so challenge screens always show content, even offline. */
+export function fallbackChallenges(): Challenge[] {
+  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+  const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
+  return [
+    {
+      id: 'june-100k-run',
+      title: 'Monthly 100km Run',
+      description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.',
+      type: 'distance',
+      sport: 'run',
+      targetValue: 100000,
+      startDate: startOfMonth,
+      endDate: endOfMonth,
+      participantCount: 0,
+    },
+    {
+      id: 'summer-elevation',
+      title: 'Summer Elevation Challenge',
+      description: 'Climb a total of 5,000 meters this month across any sport.',
+      type: 'elevation',
+      sport: 'all',
+      targetValue: 5000,
+      startDate: startOfMonth,
+      endDate: endOfMonth,
+      participantCount: 0,
+    },
+  ];
+}
+
 export async function seedSampleChallenges() {
   try {
     const challengesRef = collection(db, 'challenges');
@@ -18,7 +48,7 @@ export async function seedSampleChallenges() {
         title: 'Monthly 100km Run',
         description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.',
         type: 'distance',
-        sport: 'running',
+        sport: 'run',
         targetValue: 100000,
         startDate: startOfMonth,
         endDate: endOfMonth,

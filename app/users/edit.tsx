@@ -11,22 +11,22 @@ try {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { auth, storage } from '@/services/firebase';
-import { getUserProfile, updateUserProfile, checkUsernameUnique, UserProfile } from '@/services/socialService';
+import { getUserProfile, updateUserProfile, checkUsernameUnique } from '@/services/socialService';
+import { withTimeout } from '@/utils/async';
 import { colors, radii, spacing, type } from '@/theme';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const user = auth.currentUser;
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [hydrating, setHydrating] = useState(true);
 
-  // Form state
-  const [displayName, setDisplayName] = useState('');
+  // Form state — prefilled instantly from auth so the screen never blocks
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
-  const [photoURL, setPhotoURL] = useState<string | null>(null);
+  const [photoURL, setPhotoURL] = useState<string | null>(user?.photoURL || null);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,18 +34,17 @@ export default function EditProfileScreen() {
       router.back();
       return;
     }
-    getUserProfile(user.uid).then(p => {
-      if (p) {
-        setProfile(p);
-        setDisplayName(p.displayName || user.displayName || '');
-        setUsername(p.username || '');
-        setBio(p.bio || '');
-        setPhotoURL(p.photoURL || user.photoURL || null);
-      } else {
-        setDisplayName(user.displayName || '');
-      }
-      setLoading(false);
-    });
+    // Hydrate username/bio from Firestore in the background.
+    // Don't clobber anything the user has already typed.
+    getUserProfile(user.uid)
+      .then(p => {
+        if (!p) return;
+        setDisplayName(prev => prev || p.displayName || '');
+        setUsername(prev => prev || p.username || '');
+        setBio(prev => prev || p.bio || '');
+        setPhotoURL(prev => prev || p.photoURL || null);
+      })
+      .finally(() => setHydrating(false));
   }, [user]);
 
   const pickImage = async () => {
@@ -81,62 +80,69 @@ export default function EditProfileScreen() {
         const response = await fetch(localImageUri);
         const blob = await response.blob();
         const storageRef = ref(storage, `avatars/${user.uid}`);
-        await uploadBytes(storageRef, blob);
-        finalPhotoURL = await getDownloadURL(storageRef);
+        await withTimeout(uploadBytes(storageRef, blob), 30000);
+        finalPhotoURL = await withTimeout(getDownloadURL(storageRef), 10000);
       }
 
-      // 2. Check username uniqueness
+      // 2. Check username uniqueness (null = couldn't verify due to network)
       const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      if (cleanUsername) {
-        const isUnique = await checkUsernameUnique(cleanUsername, user.uid);
-        if (!isUnique) {
+      if (cleanUsername && cleanUsername !== '') {
+        const isUnique = await withTimeout(checkUsernameUnique(cleanUsername, user.uid), 10000);
+        if (isUnique === false) {
           Alert.alert('Taken', 'That username is already taken.');
           setSaving(false);
           return;
         }
+        if (isUnique === null) {
+          throw new Error('network');
+        }
       }
 
-      // 3. Update auth profile (for Firebase auth compatibility)
-      await updateProfile(user, {
+      // 3. Update Firestore user document — the source of truth; fail loudly
+      const saved = await withTimeout(
+        updateUserProfile(user.uid, {
+          displayName: displayName.trim(),
+          username: cleanUsername,
+          bio: bio.trim(),
+          photoURL: finalPhotoURL || null,
+        }),
+        10000,
+      );
+      if (!saved) {
+        throw new Error('firestore write failed');
+      }
+
+      // 4. Mirror to the Firebase Auth profile (best-effort, non-blocking)
+      updateProfile(user, {
         displayName: displayName.trim(),
         photoURL: finalPhotoURL,
-      });
-
-      // 4. Update Firestore user document
-      await updateUserProfile(user.uid, {
-        displayName: displayName.trim(),
-        username: cleanUsername,
-        bio: bio.trim(),
-        photoURL: finalPhotoURL || null,
-      });
+      }).catch((e) => console.warn('Auth profile mirror failed:', e));
 
       router.back();
     } catch (err) {
       console.error('Save profile error:', err);
-      Alert.alert('Error', 'Failed to save profile.');
+      Alert.alert(
+        'Could not save',
+        'There was a connection problem and your changes were not saved. Please check your internet and try again.',
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
-    );
-  }
-
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.closeBtn}>
           <Text style={styles.btnText}>Cancel</Text>
         </Pressable>
-        <Text style={type.h3}>Edit Profile</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
+          <Text style={type.h3}>Edit Profile</Text>
+          {hydrating && <ActivityIndicator color={colors.textDim} size="small" />}
+        </View>
         <Pressable onPress={handleSave} disabled={saving} style={styles.saveBtn}>
           {saving ? <ActivityIndicator color={colors.bg} size="small" /> : <Text style={styles.saveBtnText}>Save</Text>}
         </Pressable>

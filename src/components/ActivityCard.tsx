@@ -3,22 +3,8 @@ import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivitySummary } from '@/types';
 import { colors, radii, spacing, type } from '@/theme';
-import { formatDate, formatTime, formatDistance, formatDuration, formatPace, distanceUnit, paceUnit } from '@/utils/format';
+import { formatDate, formatTime, formatDistance, formatDuration, formatPace, distanceUnit, paceUnit, SPORT_ICON, SPORT_COLOR } from '@/utils/format';
 import { toggleKudo } from '@/services/cloudSyncService';
-
-const SPORT_ICON: Record<string, string> = {
-  running: 'walk',
-  cycling: 'bicycle',
-  hiking: 'trail-sign',
-  all: 'fitness',
-};
-
-const SPORT_COLOR: Record<string, string> = {
-  running: colors.accent,
-  cycling: '#00D1FF',
-  hiking: '#00E676',
-  all: colors.textDim,
-};
 
 export function ActivityCard({
   item,
@@ -116,7 +102,7 @@ function StatCell({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radii.l,
+    borderRadius: radii.card,
     marginBottom: spacing.l,
     overflow: 'hidden',
     borderWidth: 1,

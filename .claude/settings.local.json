@@ -14,7 +14,10 @@
       "Bash(git config *)",
       "Bash(git add *)",
       "Bash(git commit -m 'feat: add marketing website \\(Next.js 15\\) with pricing, terms and privacy pages *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/admin/Downloads/athlr/app.json'\\)\\); print\\(json.dumps\\(d['expo'].get\\('plugins'\\), indent=1\\)\\); print\\(json.dumps\\(d['expo'].get\\('ios'\\), indent=1\\)\\)\")"
     ]
   }
 }

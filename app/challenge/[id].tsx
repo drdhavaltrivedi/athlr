@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, FlatList, Pressable, ActivityIndicator, Alert, 
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Challenge, ChallengeParticipant } from '@/types';
-import { getChallenge, getChallengeLeaderboard, joinChallenge, getMyParticipantInfo } from '@/services/challengeService';
+import { getChallenge, getChallengeLeaderboard, joinChallenge, getMyParticipantInfo, fallbackChallenges } from '@/services/challengeService';
+import { withTimeout } from '@/utils/async';
 import { colors, radii, spacing, type } from '@/theme';
 
 export default function ChallengeDetailScreen() {
@@ -19,26 +20,19 @@ export default function ChallengeDetailScreen() {
 
   const loadData = async () => {
     if (!id || typeof id !== 'string') return;
-    let chal = await getChallenge(id);
-    
-    // Mock fallback if Firebase fails
-    if (!chal) {
-      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-      const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
-      if (id === 'june-100k-run') {
-        chal = { id: 'june-100k-run', title: 'Monthly 100km Run', description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.', type: 'distance', sport: 'running', targetValue: 100000, startDate: startOfMonth, endDate: endOfMonth, participantCount: 0 };
-      } else if (id === 'summer-elevation') {
-        chal = { id: 'summer-elevation', title: 'Summer Elevation Challenge', description: 'Climb a total of 5,000 meters this month across any sport.', type: 'elevation', sport: 'all', targetValue: 5000, startDate: startOfMonth, endDate: endOfMonth, participantCount: 0 };
-      }
-    }
+    // All three fetches in parallel, each bounded — the spinner can never run forever
+    const [chalRes, lb, me] = await Promise.all([
+      withTimeout(getChallenge(id), 8000).catch(() => null),
+      withTimeout(getChallengeLeaderboard(id), 8000).catch(() => [] as ChallengeParticipant[]),
+      withTimeout(getMyParticipantInfo(id), 8000).catch(() => null),
+    ]);
 
-    if (chal) {
-      setChallenge(chal);
-      const lb = await getChallengeLeaderboard(id);
-      setLeaderboard(lb);
-      const me = await getMyParticipantInfo(id);
-      setMyInfo(me);
-    }
+    // Fall back to the bundled challenge if Firestore has no doc for this id
+    const chal = chalRes ?? fallbackChallenges().find((c) => c.id === id) ?? null;
+
+    setChallenge(chal);
+    setLeaderboard(lb);
+    setMyInfo(me);
     setLoading(false);
   };
 
@@ -120,7 +114,7 @@ export default function ChallengeDetailScreen() {
                   <View style={[styles.progressBarFill, { width: `${myPct}%` }]} />
                 </View>
                 {myPct >= 100 && (
-                  <Text style={[type.caption, { color: colors.success, marginTop: spacing.s, textAlign: 'center' }]}>
+                  <Text style={[type.caption, { color: colors.live, marginTop: spacing.s, textAlign: 'center' }]}>
                     Challenge Completed! 🎉
                   </Text>
                 )}
@@ -146,7 +140,7 @@ export default function ChallengeDetailScreen() {
               <View style={styles.lbInfo}>
                 <Text style={type.body}>{item.displayName}</Text>
                 <View style={styles.lbBarBg}>
-                  <View style={[styles.lbBarFill, { width: `${pct}%`, backgroundColor: index < 3 ? colors.accent : colors.success }]} />
+                  <View style={[styles.lbBarFill, { width: `${pct}%`, backgroundColor: index < 3 ? colors.accent : colors.live }]} />
                 </View>
               </View>
               <Text style={[type.h3, { width: 80, textAlign: 'right' }]}>{formatProgress(item.progressValue)}</Text>
@@ -176,7 +170,7 @@ const styles = StyleSheet.create({
   },
   heroBox: {
     backgroundColor: colors.accent,
-    borderRadius: radii.l,
+    borderRadius: radii.card,
     padding: spacing.xl,
     alignItems: 'center',
     marginBottom: spacing.l,
@@ -194,7 +188,7 @@ const styles = StyleSheet.create({
   },
   myProgressBox: {
     backgroundColor: colors.surface,
-    borderRadius: radii.l,
+    borderRadius: radii.card,
     padding: spacing.l,
     borderWidth: 1,
     borderColor: colors.border,
