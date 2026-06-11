@@ -124,3 +124,22 @@ export interface SegmentEffort {
   date: number; // unix epoch ms
 }
 
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  type: 'distance' | 'elevation' | 'count';
+  sport: SportType | 'all';
+  targetValue: number; // e.g. 100000 for 100km
+  startDate: number; // unix epoch ms
+  endDate: number; // unix epoch ms
+  participantCount: number;
+}
+
+export interface ChallengeParticipant {
+  uid: string;
+  displayName: string;
+  progressValue: number;
+  joinedAt: number;
+}
+

@@ -3,6 +3,7 @@ import { db, auth } from '@/services/firebase';
 import { Activity } from '@/types';
 import polyline from '@mapbox/polyline';
 import { getPendingSyncActivities, markActivitySynced } from '@/db/database';
+import { updateChallengeProgressForActivity } from '@/services/challengeService';
 
 /**
  * Uploads an activity to Firestore so it appears in the global feed.
@@ -47,6 +48,9 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
 
     await setDoc(activityRef, cloudActivity, { merge: true });
     
+    // Auto-update any active challenges
+    await updateChallengeProgressForActivity(activity);
+
     // Mark as synced locally
     await markActivitySynced(activity.id);
   } catch (error) {

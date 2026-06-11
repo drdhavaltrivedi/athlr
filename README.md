@@ -71,12 +71,17 @@ The fitness tracking market is dominated by **Strava**, **Garmin Connect**, and 
 - ✏️ **Edit Activities** — Title editing and visibility toggles per activity.
 - 🧹 **Clean Delete** — Remove any activity with its full GPS trace
 
+- 🍎 **Apple Health / Google Fit** — Automatic background syncing
+- 🗺️ **Offline Maps** — Custom OSM tile downloading for off-the-grid tracking
+- 🏆 **Advanced Segments** — Slicing activities to create Strava-style leaderboards
+- 📈 **Detailed Charts** — Interactive Pace and Elevation curves
+- 👤 **Public Profiles** — View friends' lifetime stats and recent activities
+- 🏅 **Clubs & Challenges** — Join monthly goals and compete on leaderboards
+
 ### In Progress / Planned
 
-- Apple Health / Google Fit export
-- Advanced segment leaderboards
-- Offline maps download
 - Apple Watch / WearOS companion apps
+- Training Load analysis
 
 ---
 
