@@ -154,7 +154,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       isFollowing,
     };
   } catch (err) {
-    console.error('Failed to get user profile:', err);
+    console.warn('Failed to get user profile:', err);
     return null;
   }
 }
