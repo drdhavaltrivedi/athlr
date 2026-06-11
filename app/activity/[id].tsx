@@ -11,9 +11,12 @@ import {
 import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 import { deleteActivity, getActivity, updateTitle, updateVisibility } from '@/db/database';
 import { Activity, ActivityVisibility } from '@/types';
 import { exportAndShareGpx } from '@/utils/gpx';
+import ShareCard from '@/components/ShareCard';
 import { colors, radii, spacing, type } from '@/theme';
 import { useRecordingStore } from '@/store/recordingStore';
 import {
@@ -39,6 +42,8 @@ export default function ActivityDetailScreen() {
   const router = useRouter();
   const units = useRecordingStore((s) => s.units);
   const [activity, setActivity] = useState<Activity | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const shareCardRef = React.useRef<View>(null);
 
   useEffect(() => {
     if (id) getActivity(id).then(setActivity).catch(console.warn);
@@ -111,6 +116,35 @@ export default function ActivityDetailScreen() {
         `\nTracked with Athlr 🔥`,
       ].join('\n'),
     });
+  };
+
+  const onShareImage = async () => {
+    if (!shareCardRef.current || isCapturing) return;
+    try {
+      setIsCapturing(true);
+      
+      // Delay slightly to ensure map tiles in the offscreen component have time to load
+      await new Promise(r => setTimeout(r, 800));
+
+      const uri = await captureRef(shareCardRef, {
+        format: 'jpg',
+        quality: 0.9,
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          dialogTitle: 'Share your activity',
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (err) {
+      console.warn('Share image error:', err);
+      Alert.alert('Error', 'Could not generate share image');
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   const onDelete = () => {
@@ -219,12 +253,18 @@ export default function ActivityDetailScreen() {
 
           {/* Action buttons */}
           <View style={styles.actions}>
-            <ActionButton icon="share-outline" label="Share" onPress={onShare} />
+            <ActionButton icon="share-outline" label="Text" onPress={onShare} />
+            <ActionButton 
+              icon="image-outline" 
+              label={isCapturing ? "..." : "Image"} 
+              onPress={onShareImage} 
+            />
             <ActionButton icon="download-outline" label="GPX" onPress={() => exportAndShareGpx(activity)} />
             <ActionButton icon="trash-outline" label="Delete" onPress={onDelete} danger />
           </View>
         </View>
       </ScrollView>
+      <ShareCard ref={shareCardRef} activity={activity} units={units} />
     </>
   );
 }
