@@ -1,8 +1,34 @@
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '@/services/firebase';
+import { syncPendingActivities } from '@/services/cloudSyncService';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Sync on app startup / foreground
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        syncPendingActivities();
+      }
+    });
+    
+    // Sync when user logs in
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        syncPendingActivities();
+      }
+    });
+
+    return () => {
+      sub.remove();
+      unsubAuth();
+    };
+  }, []);
+
   return (
     <>
       <StatusBar style="light" />

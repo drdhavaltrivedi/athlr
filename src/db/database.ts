@@ -144,6 +144,23 @@ export async function deleteActivity(id: string): Promise<void> {
   await db.runAsync(`DELETE FROM activities WHERE id = ?`, id);
 }
 
+export async function getPendingSyncActivities(): Promise<Activity[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    `SELECT * FROM activities WHERE synced = 0 AND visibility != 'private'`,
+  );
+  return rows.map((row) => ({
+    ...rowToSummary(row),
+    points: JSON.parse(row.points_json as string),
+    splits: JSON.parse(row.splits_json as string),
+  }));
+}
+
+export async function markActivitySynced(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(`UPDATE activities SET synced = 1 WHERE id = ?`, id);
+}
+
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function listActivities(

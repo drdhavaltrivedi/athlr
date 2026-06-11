@@ -2,6 +2,7 @@ import { collection, doc, setDoc, serverTimestamp, query, where, getDocs, limit,
 import { db, auth } from '@/services/firebase';
 import { Activity } from '@/types';
 import polyline from '@mapbox/polyline';
+import { getPendingSyncActivities, markActivitySynced } from '@/db/database';
 
 /**
  * Uploads an activity to Firestore so it appears in the global feed.
@@ -45,8 +46,36 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
     };
 
     await setDoc(activityRef, cloudActivity, { merge: true });
+    
+    // Mark as synced locally
+    await markActivitySynced(activity.id);
   } catch (error) {
     console.error('Failed to sync activity:', error);
+  }
+}
+
+/**
+ * Background sync function. Queries SQLite for activities that haven't
+ * been synced to the cloud yet (synced = 0) and uploads them.
+ */
+export async function syncPendingActivities(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) return; // Wait until logged in
+
+  try {
+    const pending = await getPendingSyncActivities();
+    if (pending.length === 0) return;
+
+    console.log(`Syncing ${pending.length} pending activities...`);
+    
+    // Upload sequentially to avoid overloading network/Firebase limits
+    for (const activity of pending) {
+      await syncActivityToCloud(activity);
+    }
+    
+    console.log('Background sync complete.');
+  } catch (error) {
+    console.error('Error during background sync:', error);
   }
 }
 
