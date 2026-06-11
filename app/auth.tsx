@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -130,92 +131,94 @@ export default function AuthScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.card}>
-        <Text style={[type.title, { marginBottom: spacing.l }]}>
-          {isLogin ? 'Welcome Back' : 'Join the Community'}
-        </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.card}>
+          <Text style={[type.title, { marginBottom: spacing.l }]}>
+            {isLogin ? 'Welcome Back' : 'Join the Community'}
+          </Text>
 
-        {!isLogin && (
+          {!isLogin && (
+            <TextInput
+              style={styles.input}
+              placeholder="Full Name"
+              placeholderTextColor={colors.textDim}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+          )}
+
           <TextInput
             style={styles.input}
-            placeholder="Full Name"
+            placeholder="Email Address"
             placeholderTextColor={colors.textDim}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
-        )}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email Address"
-          placeholderTextColor={colors.textDim}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor={colors.textDim}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.textDim}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          <Pressable
+            style={styles.btn}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.bg} />
+            ) : (
+              <Text style={styles.btnText}>
+                {isLogin ? 'Log In' : 'Sign Up'}
+              </Text>
+            )}
+          </Pressable>
 
-        <Pressable
-          style={styles.btn}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.bg} />
-          ) : (
-            <Text style={styles.btnText}>
-              {isLogin ? 'Log In' : 'Sign Up'}
+          <Pressable
+            style={styles.switchBtn}
+            onPress={() => setIsLogin(!isLogin)}
+          >
+            <Text style={styles.switchBtnText}>
+              {isLogin
+                ? "Don't have an account? Sign up"
+                : 'Already have an account? Log in'}
             </Text>
-          )}
-        </Pressable>
+          </Pressable>
 
-        <Pressable
-          style={styles.switchBtn}
-          onPress={() => setIsLogin(!isLogin)}
-        >
-          <Text style={styles.switchBtnText}>
-            {isLogin
-              ? "Don't have an account? Sign up"
-              : 'Already have an account? Log in'}
-          </Text>
-        </Pressable>
+          <View style={styles.divider}>
+            <View style={styles.line} />
+            <Text style={styles.orText}>OR</Text>
+            <View style={styles.line} />
+          </View>
 
-        <View style={styles.divider}>
-          <View style={styles.line} />
-          <Text style={styles.orText}>OR</Text>
-          <View style={styles.line} />
+          <Pressable 
+            style={[styles.btn, styles.googleBtn]}
+            onPress={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="logo-google" size={20} color="#000000" />
+                <Text style={styles.googleBtnText}>Continue with Google</Text>
+              </View>
+            )}
+          </Pressable>
         </View>
-
-        <Pressable 
-          style={[styles.btn, styles.googleBtn]}
-          onPress={handleGoogleSignIn}
-          disabled={loading || googleLoading}
-        >
-          {googleLoading ? (
-            <ActivityIndicator color="#000000" />
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="logo-google" size={20} color="#000000" />
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
-            </View>
-          )}
-        </Pressable>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
