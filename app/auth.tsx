@@ -19,6 +19,7 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithCredential,
+  getAdditionalUserInfo,
 } from 'firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { doc, setDoc } from 'firebase/firestore';
@@ -75,9 +76,12 @@ export default function AuthScreen() {
             },
           })
         ]).catch(err => console.error('Failed to initialize user profile:', err));
+        
+        router.replace('/onboarding');
+        return;
       }
       
-      // On success, go back to profile or wherever they came from
+      // On success login, go back to profile or wherever they came from
       if (router.canGoBack()) {
         router.back();
       } else {
@@ -117,6 +121,12 @@ export default function AuthScreen() {
           elevationGainM: 0,
         },
       }, { merge: true });
+
+      const additionalInfo = getAdditionalUserInfo(cred);
+      if (additionalInfo?.isNewUser) {
+        router.replace('/onboarding');
+        return;
+      }
 
       if (router.canGoBack()) {
         router.back();
