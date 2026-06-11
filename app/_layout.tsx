@@ -49,6 +49,32 @@ export default function RootLayout() {
             presentation: 'modal',
           }}
         />
+        <Stack.Screen 
+          name="users/search" 
+          options={{ 
+            title: 'Find Friends', 
+            presentation: 'modal' 
+          }} 
+        />
+        <Stack.Screen 
+          name="users/[id]" 
+          options={{ 
+            title: 'Profile' 
+          }} 
+        />
+        <Stack.Screen 
+          name="segment/[id]" 
+          options={{ 
+            title: 'Segment' 
+          }} 
+        />
+        <Stack.Screen 
+          name="segment/create/[activityId]" 
+          options={{ 
+            title: 'Create Segment',
+            presentation: 'modal'
+          }} 
+        />
       </Stack>
     </>
   );
