@@ -15,6 +15,7 @@ import { useRecordingStore } from '@/store/recordingStore';
 import { useAuthStore } from '@/store/authStore';
 import { auth } from '@/services/firebase';
 import { signOut } from 'firebase/auth';
+import { getUserProfile, UserProfile } from '@/services/socialService';
 import { colors, radii, spacing, type } from '@/theme';
 import { formatDistance, formatDuration, distanceUnit } from '@/utils/format';
 import { Units } from '@/types';
@@ -36,27 +37,19 @@ export default function ProfileScreen() {
   const setDisplayName = useRecordingStore((s) => s.setDisplayName);
 
   const { user } = useAuthStore();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       lifetimeStats().then(setStats).catch(console.warn);
-    }, []),
+      if (user) {
+        getUserProfile(user.uid).then(setProfile).catch(console.warn);
+      }
+    }, [user]),
   );
 
-  const onEditName = () => {
-    Alert.prompt(
-      'Your name',
-      'This is shown on your profile.',
-      (text) => {
-        if (text != null) setDisplayName(text.trim());
-      },
-      'plain-text',
-      displayName,
-    );
-  };
-
-  const initials = displayName
-    ? displayName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
+  const initials = profile?.displayName || user?.displayName || displayName
+    ? (profile?.displayName || user?.displayName || displayName)!.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
 
   return (
@@ -66,27 +59,51 @@ export default function ProfileScreen() {
     >
       {/* Avatar + name card */}
       <View style={styles.profileCard}>
-        <Pressable style={styles.avatar} onPress={user ? undefined : () => router.push('/auth')}>
-          <Text style={styles.avatarText}>{user?.displayName?.[0]?.toUpperCase() || initials}</Text>
+        <Pressable style={styles.avatar} onPress={user ? () => router.push('/users/edit') : () => router.push('/auth')}>
+          {profile?.photoURL || user?.photoURL ? (
+             <View style={[StyleSheet.absoluteFill, { borderRadius: 32, overflow: 'hidden' }]}>
+               <View style={{ width: '100%', height: '100%', backgroundColor: colors.surfaceAlt }}>
+                 <Ionicons name="person" size={24} color={colors.textDim} style={{ position: 'absolute', top: 20, left: 20 }} />
+                 <Text style={{ position: 'absolute', opacity: 0 }}>{profile?.photoURL || user?.photoURL}</Text>
+               </View>
+             </View>
+          ) : (
+            <Text style={styles.avatarText}>{initials}</Text>
+          )}
         </Pressable>
         <View style={{ flex: 1 }}>
           <Pressable onPress={user ? undefined : () => router.push('/auth')}>
             <Text style={type.title}>
-              {user ? user.displayName : (displayName || 'Tap to sign in')}
+              {profile?.displayName || user?.displayName || displayName || 'Tap to sign in'}
             </Text>
-            <Text style={type.caption}>{user ? user.email : 'Athlr athlete'}</Text>
+            <Text style={type.caption}>
+              {profile?.username ? `@${profile.username}` : (user?.email || 'Athlr athlete')}
+            </Text>
+            {profile?.bio ? (
+              <Text style={[type.body, { marginTop: spacing.xs, color: colors.textDim }]}>{profile.bio}</Text>
+            ) : null}
           </Pressable>
         </View>
-        {!user ? (
-          <Pressable onPress={() => router.push('/auth')} style={styles.loginBtn}>
-            <Text style={styles.loginBtnText}>Log In</Text>
+      </View>
+
+      {user && (
+        <View style={styles.actionRow}>
+          <Pressable style={styles.editBtn} onPress={() => router.push('/users/edit')}>
+            <Text style={styles.editBtnText}>Edit Profile</Text>
           </Pressable>
-        ) : (
           <Pressable onPress={() => signOut(auth)} style={styles.logoutBtn}>
             <Ionicons name="log-out-outline" size={20} color={colors.textDim} />
           </Pressable>
-        )}
-      </View>
+        </View>
+      )}
+
+      {!user && (
+        <View style={styles.actionRow}>
+          <Pressable onPress={() => router.push('/auth')} style={styles.loginBtn}>
+            <Text style={styles.loginBtnText}>Log In</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Lifetime stats */}
       <View style={styles.card}>
@@ -233,6 +250,25 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 22,
     fontWeight: '800',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.m,
+  },
+  editBtn: {
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: spacing.l,
+    paddingVertical: spacing.s,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  editBtnText: {
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 14,
   },
   loginBtn: {
     backgroundColor: colors.surfaceAlt,

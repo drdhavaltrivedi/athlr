@@ -57,6 +57,13 @@ export default function RootLayout() {
           }} 
         />
         <Stack.Screen 
+          name="users/edit" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: false,
+          }} 
+        />
+        <Stack.Screen 
           name="users/[id]" 
           options={{ 
             title: 'Profile' 

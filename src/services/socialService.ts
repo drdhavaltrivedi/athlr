@@ -5,7 +5,51 @@ export interface UserProfile {
   uid: string;
   displayName: string;
   email?: string;
+  photoURL?: string;
+  username?: string;
+  bio?: string;
   isFollowing?: boolean;
+}
+
+export async function checkUsernameUnique(username: string, currentUid: string): Promise<boolean> {
+  try {
+    const q = query(collection(db, 'users'), where('username', '==', username));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return true;
+    
+    // If it's taken but it's our own document, it's fine
+    let isOurs = true;
+    snapshot.forEach(d => {
+      if (d.id !== currentUid) isOurs = false;
+    });
+    return isOurs;
+  } catch (err) {
+    console.warn('Failed to check username:', err);
+    return false; // fail safe
+  }
+}
+
+export async function updateUserProfile(uid: string, data: Partial<UserProfile>): Promise<boolean> {
+  try {
+    await setDoc(doc(db, 'users', uid), data, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Failed to update profile:', err);
+    return false;
+  }
+}
+
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const docSnap = await getDoc(doc(db, 'users', uid));
+    if (docSnap.exists()) {
+      return { uid: docSnap.id, ...docSnap.data() } as UserProfile;
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to get user profile:', err);
+    return null;
+  }
 }
 
 export async function searchUsers(searchQuery: string): Promise<UserProfile[]> {
@@ -36,6 +80,9 @@ export async function searchUsers(searchQuery: string): Promise<UserProfile[]> {
           uid: doc.id,
           displayName: data.displayName,
           email: data.email,
+          photoURL: data.photoURL,
+          username: data.username,
+          bio: data.bio,
           isFollowing: followingIds.has(doc.id),
         });
       }
