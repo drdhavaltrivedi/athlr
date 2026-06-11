@@ -39,19 +39,6 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   }
 }
 
-export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  try {
-    const docSnap = await getDoc(doc(db, 'users', uid));
-    if (docSnap.exists()) {
-      return { uid: docSnap.id, ...docSnap.data() } as UserProfile;
-    }
-    return null;
-  } catch (err) {
-    console.error('Failed to get user profile:', err);
-    return null;
-  }
-}
-
 export async function searchUsers(searchQuery: string): Promise<UserProfile[]> {
   const currentUser = auth.currentUser;
   if (!currentUser || !searchQuery.trim()) return [];
@@ -161,6 +148,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
       uid: userDoc.id,
       displayName: data.displayName || 'Unknown Athlete',
       email: data.email,
+      photoURL: data.photoURL,
+      username: data.username,
+      bio: data.bio,
       isFollowing,
     };
   } catch (err) {
