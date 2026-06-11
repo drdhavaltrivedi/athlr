@@ -17,7 +17,14 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Athlr tracks your activity in the background so your route keeps recording when the screen is off.",
         "UIBackgroundModes": ["location"],
         "NSHealthShareUsageDescription": "Athlr reads your workouts, heart rate, and routes from Apple Health so you can see all your activity in one place — including data from Apple Watch, Garmin, and other apps.",
-        "NSHealthUpdateUsageDescription": "Athlr can write completed activities to Apple Health so your workouts appear in your health record."
+        "NSHealthUpdateUsageDescription": "Athlr can write completed activities to Apple Health so your workouts appear in your health record.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.455854898290-ul8qt89ku3o3p786f6dvhp5aq59skcb9"
+            ]
+          }
+        ]
       },
       "entitlements": {
         "com.apple.developer.healthkit": true,
