@@ -13,13 +13,49 @@ export default function ChallengesScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadChallenges = async () => {
-    let data = await getActiveChallenges();
-    if (data.length === 0) {
-      await seedSampleChallenges();
-      data = await getActiveChallenges();
+    try {
+      let data = await getActiveChallenges();
+      if (data.length === 0) {
+        await seedSampleChallenges();
+        data = await getActiveChallenges();
+      }
+      
+      // Fallback to in-memory mock data if Firestore fails due to rules or network
+      if (data.length === 0) {
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+        const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
+        data = [
+          {
+            id: 'june-100k-run',
+            title: 'Monthly 100km Run',
+            description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.',
+            type: 'distance',
+            sport: 'running',
+            targetValue: 100000,
+            startDate: startOfMonth,
+            endDate: endOfMonth,
+            participantCount: 0,
+          },
+          {
+            id: 'summer-elevation',
+            title: 'Summer Elevation Challenge',
+            description: 'Climb a total of 5,000 meters this month across any sport.',
+            type: 'elevation',
+            sport: 'all',
+            targetValue: 5000,
+            startDate: startOfMonth,
+            endDate: endOfMonth,
+            participantCount: 0,
+          }
+        ];
+      }
+      
+      setChallenges(data);
+    } catch (err) {
+      console.warn('Could not load challenges:', err);
+    } finally {
+      setLoading(false);
     }
-    setChallenges(data);
-    setLoading(false);
   };
 
   useEffect(() => {

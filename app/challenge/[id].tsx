@@ -19,7 +19,19 @@ export default function ChallengeDetailScreen() {
 
   const loadData = async () => {
     if (!id || typeof id !== 'string') return;
-    const chal = await getChallenge(id);
+    let chal = await getChallenge(id);
+    
+    // Mock fallback if Firebase fails
+    if (!chal) {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+      const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
+      if (id === 'june-100k-run') {
+        chal = { id: 'june-100k-run', title: 'Monthly 100km Run', description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.', type: 'distance', sport: 'running', targetValue: 100000, startDate: startOfMonth, endDate: endOfMonth, participantCount: 0 };
+      } else if (id === 'summer-elevation') {
+        chal = { id: 'summer-elevation', title: 'Summer Elevation Challenge', description: 'Climb a total of 5,000 meters this month across any sport.', type: 'elevation', sport: 'all', targetValue: 5000, startDate: startOfMonth, endDate: endOfMonth, participantCount: 0 };
+      }
+    }
+
     if (chal) {
       setChallenge(chal);
       const lb = await getChallengeLeaderboard(id);

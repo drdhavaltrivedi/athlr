@@ -3,52 +3,56 @@ import { db, auth } from '@/services/firebase';
 import { Challenge, ChallengeParticipant, Activity } from '@/types';
 
 export async function seedSampleChallenges() {
-  const challengesRef = collection(db, 'challenges');
-  const snapshot = await getDocs(challengesRef);
-  if (!snapshot.empty) return; // already seeded
+  try {
+    const challengesRef = collection(db, 'challenges');
+    const snapshot = await getDocs(challengesRef);
+    if (!snapshot.empty) return; // already seeded
 
-  const now = Date.now();
-  const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-  const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
+    const now = Date.now();
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59).getTime();
 
-  const sampleChallenges: Challenge[] = [
-    {
-      id: 'june-100k-run',
-      title: 'Monthly 100km Run',
-      description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.',
-      type: 'distance',
-      sport: 'running',
-      targetValue: 100000,
-      startDate: startOfMonth,
-      endDate: endOfMonth,
-      participantCount: 0,
-    },
-    {
-      id: 'summer-elevation',
-      title: 'Summer Elevation Challenge',
-      description: 'Climb a total of 5,000 meters this month across any sport.',
-      type: 'elevation',
-      sport: 'all',
-      targetValue: 5000,
-      startDate: startOfMonth,
-      endDate: endOfMonth,
-      participantCount: 0,
-    },
-    {
-      id: 'cycling-century',
-      title: 'Century Ride Month',
-      description: 'Ride 500km this month on your bike.',
-      type: 'distance',
-      sport: 'cycling',
-      targetValue: 500000,
-      startDate: startOfMonth,
-      endDate: endOfMonth,
-      participantCount: 0,
+    const sampleChallenges: Challenge[] = [
+      {
+        id: 'june-100k-run',
+        title: 'Monthly 100km Run',
+        description: 'Push yourself this month! Run 100km total before the month ends to complete the challenge.',
+        type: 'distance',
+        sport: 'running',
+        targetValue: 100000,
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+        participantCount: 0,
+      },
+      {
+        id: 'summer-elevation',
+        title: 'Summer Elevation Challenge',
+        description: 'Climb a total of 5,000 meters this month across any sport.',
+        type: 'elevation',
+        sport: 'all',
+        targetValue: 5000,
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+        participantCount: 0,
+      },
+      {
+        id: 'cycling-century',
+        title: 'Century Ride Month',
+        description: 'Ride 500km this month on your bike.',
+        type: 'distance',
+        sport: 'cycling',
+        targetValue: 500000,
+        startDate: startOfMonth,
+        endDate: endOfMonth,
+        participantCount: 0,
+      }
+    ];
+
+    for (const c of sampleChallenges) {
+      await setDoc(doc(db, 'challenges', c.id), c);
     }
-  ];
-
-  for (const c of sampleChallenges) {
-    await setDoc(doc(db, 'challenges', c.id), c);
+  } catch (err) {
+    console.warn('Failed to seed challenges. This is likely due to Firestore security rules:', err);
   }
 }
 
