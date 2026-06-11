@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+let ImagePicker: any = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch (e) {
+  console.warn('expo-image-picker native module not found');
+}
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { updateProfile } from 'firebase/auth';
 import { auth, storage } from '@/services/firebase';
@@ -44,6 +49,10 @@ export default function EditProfileScreen() {
   }, [user]);
 
   const pickImage = async () => {
+    if (!ImagePicker) {
+      Alert.alert('Not Supported', 'Image picking is not supported in this environment.');
+      return;
+    }
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
