@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Polyline, PROVIDER_DEFAULT, LocalTile } from 'react-native-maps';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { captureRef } from 'react-native-view-shot';
@@ -18,6 +18,7 @@ import { Activity, ActivityVisibility } from '@/types';
 import { exportAndShareGpx } from '@/utils/gpx';
 import ShareCard from '@/components/ShareCard';
 import * as healthService from '@/services/healthService';
+import * as mapCache from '@/services/mapCacheService';
 import { colors, radii, spacing, type } from '@/theme';
 import { useRecordingStore } from '@/store/recordingStore';
 import {
@@ -198,6 +199,11 @@ export default function ActivityDetailScreen() {
             {coords.length > 1 && (
               <Polyline coordinates={coords} strokeColor={sportColor} strokeWidth={4} />
             )}
+            <LocalTile 
+              pathTemplate={mapCache.getLocalTileUrlTemplate()} 
+              tileSize={256}
+              zIndex={-1} 
+            />
           </MapView>
 
           {/* Sport badge overlay */}

@@ -32,9 +32,14 @@ export default function TabLayout() {
             <Ionicons name="list" color={color} size={size} />
           ),
           headerRight: () => (
-            <Pressable onPress={() => router.push('/users/search')} style={{ marginRight: spacing.m }}>
-              <Ionicons name="person-add" size={24} color={colors.accent} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Pressable onPress={() => router.push('/offline-maps')} style={{ marginRight: spacing.m }}>
+                <Ionicons name="map" size={24} color={colors.accent} />
+              </Pressable>
+              <Pressable onPress={() => router.push('/users/search')} style={{ marginRight: spacing.m }}>
+                <Ionicons name="person-add" size={24} color={colors.accent} />
+              </Pressable>
+            </View>
           ),
         }}
       />

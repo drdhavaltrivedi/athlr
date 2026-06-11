@@ -8,12 +8,13 @@ import {
   Text,
   View,
 } from 'react-native';
-import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Polyline, PROVIDER_DEFAULT, LocalTile } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
 import { useRecordingStore } from '@/store/recordingStore';
+import * as mapCache from '@/services/mapCacheService';
 import {
   getCurrentPosition,
   requestPermissions,
@@ -151,6 +152,7 @@ export default function RecordScreen() {
   }));
 
   const sportColor = SPORT_COLOR[sport] ?? colors.accent;
+  const tileTemplate = mapCache.getLocalTileUrlTemplate();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -171,6 +173,11 @@ export default function RecordScreen() {
               strokeWidth={5}
             />
           )}
+          <LocalTile 
+            pathTemplate={tileTemplate} 
+            tileSize={256}
+            zIndex={-1} 
+          />
         </MapView>
 
         {/* Sport picker — idle only */}
