@@ -15,12 +15,21 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithCredential,
 } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/services/firebase';
 import { useAuthStore } from '@/store/authStore';
 import { useRecordingStore } from '@/store/recordingStore';
 import { colors, radii, spacing, type } from '@/theme';
+
+// Configure Google Sign-In with a placeholder Web Client ID.
+// The user needs to replace this with their actual Web Client ID from the Firebase Console.
+GoogleSignin.configure({
+  webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+});
 
 export default function AuthScreen() {
   const router = useRouter();
@@ -73,6 +82,45 @@ export default function AuthScreen() {
       Alert.alert('Authentication Failed', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+      
+      if (!idToken) {
+        throw new Error('No ID token found.');
+      }
+
+      const credential = GoogleAuthProvider.credential(idToken);
+      const cred = await signInWithCredential(auth, credential);
+      
+      // Sync basic info if it's a new account or just to be safe
+      const displayName = cred.user.displayName || 'Athlete';
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        displayName,
+        createdAt: cred.user.metadata.creationTime ? new Date(cred.user.metadata.creationTime).getTime() : Date.now(),
+        // Only set stats if we want to initialize it. Using merge: true prevents overwriting existing users.
+        stats: {
+          activities: 0,
+          distanceM: 0,
+          movingS: 0,
+          elevationGainM: 0,
+        },
+      }, { merge: true });
+
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/profile');
+      }
+    } catch (error: any) {
+      if (error.code !== 'SIGN_IN_CANCELLED') {
+        Alert.alert('Google Sign-In Failed', error.message);
+      }
     }
   };
 
@@ -140,6 +188,19 @@ export default function AuthScreen() {
               : 'Already have an account? Log in'}
           </Text>
         </Pressable>
+
+        <View style={styles.divider}>
+          <View style={styles.line} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.line} />
+        </View>
+
+        <Pressable
+          style={styles.googleBtn}
+          onPress={handleGoogleSignIn}
+        >
+          <Text style={styles.googleBtnText}>Continue with Google</Text>
+        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
@@ -189,5 +250,34 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontSize: 14,
     fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.xl,
+  },
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  orText: {
+    color: colors.textDim,
+    marginHorizontal: spacing.m,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  googleBtn: {
+    backgroundColor: '#ffffff',
+    borderRadius: radii.pill,
+    padding: spacing.m,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  googleBtnText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
