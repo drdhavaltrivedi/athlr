@@ -1,6 +1,5 @@
 import * as SQLite from 'expo-sqlite';
 import { Activity, ActivitySummary, DayActivity, WeekStats } from '@/types';
-import { syncActivityToCloud } from '@/services/cloudSyncService';
 
 /**
  * Offline-first storage. Every activity lives on-device in SQLite;
@@ -86,7 +85,7 @@ export async function saveActivity(
   
   // Sync to cloud if visibility is not private
   if (a.visibility !== 'private') {
-    syncActivityToCloud(a);
+    import('@/services/cloudSyncService').then(m => m.syncActivityToCloud(a)).catch(console.error);
   }
 }
 
@@ -135,7 +134,7 @@ export async function updateVisibility(
       points: JSON.parse(row.points_json),
       splits: JSON.parse(row.splits_json),
     };
-    syncActivityToCloud(a);
+    import('@/services/cloudSyncService').then(m => m.syncActivityToCloud(a)).catch(console.error);
   }
 }
 
