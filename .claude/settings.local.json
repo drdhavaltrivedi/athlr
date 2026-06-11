@@ -7,7 +7,9 @@
       "Bash(jobs)",
       "Bash(tmux new-session *)",
       "Bash(tmux send-keys *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(grep -E '\\\\.\\(json|md|ts|tsx|js\\)$')",
+      "Bash(npm run *)"
     ]
   }
 }
