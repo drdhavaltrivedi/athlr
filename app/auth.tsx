@@ -28,6 +28,7 @@ import { colors, radii, spacing, type } from '@/theme';
 // Configure Google Sign-In with Web Client ID from Firebase Console.
 GoogleSignin.configure({
   webClientId: '455854898290-2v4oj6nm2djplsk4td2kvs67knhp6ga6.apps.googleusercontent.com',
+  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // User needs to provide this or add GoogleService-Info.plist
 });
 
 export default function AuthScreen() {
