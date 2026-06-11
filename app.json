@@ -3,6 +3,7 @@
     "name": "Athlr",
     "slug": "athlr",
     "version": "0.1.0",
+    "icon": "./assets/images/icon.png",
     "orientation": "portrait",
     "scheme": "athlr",
     "userInterfaceStyle": "dark",
