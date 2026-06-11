@@ -28,11 +28,33 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           visibility TEXT NOT NULL DEFAULT 'private',
           points_json TEXT NOT NULL,
           splits_json TEXT NOT NULL,
-          synced INTEGER NOT NULL DEFAULT 0
+          synced INTEGER NOT NULL DEFAULT 0,
+          source TEXT NOT NULL DEFAULT 'manual',
+          source_id TEXT,
+          avg_heart_rate INTEGER,
+          calories INTEGER
         );
         CREATE INDEX IF NOT EXISTS idx_activities_started
           ON activities(started_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_activities_source_id
+          ON activities(source_id);
       `);
+
+      // Migration: add new columns to existing DBs that don't have them
+      const cols = await db.getAllAsync<{name: string}>(`PRAGMA table_info(activities)`);
+      const colNames = cols.map(c => c.name);
+      if (!colNames.includes('source')) {
+        await db.execAsync(`ALTER TABLE activities ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'`);
+      }
+      if (!colNames.includes('source_id')) {
+        await db.execAsync(`ALTER TABLE activities ADD COLUMN source_id TEXT`);
+      }
+      if (!colNames.includes('avg_heart_rate')) {
+        await db.execAsync(`ALTER TABLE activities ADD COLUMN avg_heart_rate INTEGER`);
+      }
+      if (!colNames.includes('calories')) {
+        await db.execAsync(`ALTER TABLE activities ADD COLUMN calories INTEGER`);
+      }
       return db;
     });
   }
@@ -41,18 +63,34 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
 
 // ─── Write ────────────────────────────────────────────────────────────────────
 
-export async function saveActivity(a: Activity): Promise<void> {
+export async function saveActivity(
+  a: Activity,
+  extra?: { source?: string; sourceId?: string; avgHeartRate?: number | null; calories?: number | null },
+): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     `INSERT OR REPLACE INTO activities
      (id, sport, title, started_at, ended_at, elapsed_s, moving_s,
       distance_m, elevation_gain_m, avg_pace_s_per_km, visibility,
-      points_json, splits_json, synced)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      points_json, splits_json, synced, source, source_id, avg_heart_rate, calories)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
     a.id, a.sport, a.title, a.startedAt, a.endedAt, a.elapsedS,
     a.movingS, a.distanceM, a.elevationGainM, a.avgPaceSPerKm,
     a.visibility, JSON.stringify(a.points), JSON.stringify(a.splits),
+    extra?.source ?? 'manual',
+    extra?.sourceId ?? null,
+    extra?.avgHeartRate ?? null,
+    extra?.calories ?? null,
   );
+}
+
+/** Returns true if a workout with the given sourceId is already in the DB. */
+export async function isAlreadyImported(sourceId: string): Promise<boolean> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ id: string }>(
+    `SELECT id FROM activities WHERE source_id = ? LIMIT 1`, sourceId,
+  );
+  return row != null;
 }
 
 export async function updateTitle(id: string, title: string): Promise<void> {

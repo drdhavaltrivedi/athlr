@@ -16,6 +16,13 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="activity/[id]" options={{ title: 'Activity' }} />
+        <Stack.Screen
+          name="sync"
+          options={{
+            title: 'Connect Health',
+            presentation: 'modal',
+          }}
+        />
       </Stack>
     </>
   );

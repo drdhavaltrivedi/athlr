@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { lifetimeStats, LifetimeStats } from '@/db/database';
 import { useRecordingStore } from '@/store/recordingStore';
@@ -24,6 +24,7 @@ export default function ProfileScreen() {
     elevationGainM: 0,
   });
 
+  const router = useRouter();
   const autoPause = useRecordingStore((s) => s.autoPause);
   const setAutoPause = useRecordingStore((s) => s.setAutoPause);
   const units = useRecordingStore((s) => s.units);
@@ -86,6 +87,18 @@ export default function ProfileScreen() {
           <BigStat label="Elevation · m" value={String(Math.round(stats.elevationGainM))} />
         </View>
       </View>
+
+      {/* Connect Health */}
+      <Pressable style={[styles.card, styles.healthCard]} onPress={() => router.push('/sync')}>
+        <View style={styles.healthIconWrap}>
+          <Ionicons name="heart-circle" size={24} color="#FF2D55" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={type.title}>Connect Health Data</Text>
+          <Text style={type.caption}>Import from Apple Health, Google Fit, Apple Watch, Garmin &amp; more</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+      </Pressable>
 
       {/* Units preference */}
       <View style={styles.card}>
@@ -252,4 +265,20 @@ const styles = StyleSheet.create({
     gap: spacing.m,
   },
   promiseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.s },
+
+  healthCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: '#FF2D5544',
+    backgroundColor: '#FF2D5508',
+  },
+  healthIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FF2D5522',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.s,
+  },
 });
