@@ -25,10 +25,9 @@ import { useAuthStore } from '@/store/authStore';
 import { useRecordingStore } from '@/store/recordingStore';
 import { colors, radii, spacing, type } from '@/theme';
 
-// Configure Google Sign-In with a placeholder Web Client ID.
-// The user needs to replace this with their actual Web Client ID from the Firebase Console.
+// Configure Google Sign-In with Web Client ID from Firebase Console.
 GoogleSignin.configure({
-  webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+  webClientId: '455854898290-2v4oj6nm2djplsk4td2kvs67knhp6ga6.apps.googleusercontent.com',
 });
 
 export default function AuthScreen() {
