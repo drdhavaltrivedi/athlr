@@ -742,6 +742,60 @@ Full Privacy Policy: _to be published at https://athlr.app/privacy_
 
 ---
 
+## Marketing Website & Admin Panel (`website/`)
+
+The repo also contains the **Athlr marketing website** — a Next.js 15 app deployed on Vercel
+(set the Vercel project's **Root Directory** to `website`).
+
+| Route | What it is |
+|---|---|
+| `/` | Animated landing page (hero, features, stats, download CTA) |
+| `/pricing` | Free / Pro / Pro Annual plans + FAQ |
+| `/terms`, `/privacy` | Legal pages |
+| `/admin` | **Admin panel** (noindexed, login-gated) |
+
+### Admin panel
+
+`/admin` gives full management of the Firebase backend:
+
+- **Dashboard** — live user / shared-activity / challenge counts
+- **Users** — search & view all user profiles, delete profiles
+- **Clubs & Challenges** — create, edit, delete challenges; view participant leaderboards
+- **Activities** — moderate the community feed (remove shared activities; athletes always keep their local copy)
+
+**Access control:** sign-in via Firebase Auth, then gated by either
+(a) the allowlisted admin email below, or (b) a doc at `admins/{uid}` in Firestore.
+Enforcement also lives in `firestore.rules` (repo root) — keep both in sync.
+
+> **Admin credentials** (internal — rotate before any public launch):
+> `admin@brilworks.com` / `Brilworks@2026`
+> ⚠️ This account exists in Firebase Auth; the password is **not** stored in code.
+> Anyone with repo access can read this — rotate it in Firebase Console → Authentication if the repo becomes public.
+
+### Firebase setup checklist (required once)
+
+1. **Enable Cloud Firestore** — ⚠️ as of June 2026 the Firestore API was **never enabled** on the
+   `athlr-b` project, which is why all cloud features (community feed, profile save, challenges)
+   fail. Fix: [Firebase Console → Firestore Database → Create database](https://console.firebase.google.com/project/athlr-b/firestore)
+   (production mode, choose a region close to your users).
+2. **Deploy security rules** — paste `firestore.rules` (repo root) into
+   Firestore → Rules → Publish.
+3. **Auth providers** — Email/Password and Google are enabled in Firebase Console → Authentication. New app signups receive a **verification email** automatically.
+4. **(Optional) more admins** — add a doc `admins/<auth-uid>` (e.g. `{ role: "admin" }`),
+   or extend `ADMIN_EMAILS` in `website/components/admin/AdminShell.tsx` *and* the
+   email check in `firestore.rules`.
+
+### Website development
+
+```bash
+cd website
+npm install
+npm run dev    # http://localhost:3000
+npm run build  # production build (what Vercel runs)
+```
+
+---
+
 ## License
 
 MIT © 2026 [drdhavaltrivedi](https://github.com/drdhavaltrivedi)

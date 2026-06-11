@@ -14,6 +14,10 @@ import {
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
+// Accounts allowed into the panel even without an admins/{uid} doc.
+// Mirrored in firestore.rules — keep both in sync.
+const ADMIN_EMAILS = ['admin@brilworks.com'];
+
 const NAV = [
   { href: '/admin', label: 'Dashboard', icon: '📊' },
   { href: '/admin/users', label: 'Users', icon: '👥' },
@@ -33,6 +37,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       setUser(u);
       if (!u) {
         setIsAdmin(null);
+        return;
+      }
+      if (u.email && ADMIN_EMAILS.includes(u.email.toLowerCase())) {
+        setIsAdmin(true);
         return;
       }
       try {
