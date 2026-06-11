@@ -3,6 +3,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -10,21 +11,33 @@ import {
 import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { deleteActivity, getActivity } from '@/db/database';
-import { Activity } from '@/types';
+import { deleteActivity, getActivity, updateTitle, updateVisibility } from '@/db/database';
+import { Activity, ActivityVisibility } from '@/types';
 import { exportAndShareGpx } from '@/utils/gpx';
 import { colors, radii, spacing, type } from '@/theme';
+import { useRecordingStore } from '@/store/recordingStore';
 import {
   formatDate,
-  formatDistanceKm,
+  formatDistance,
   formatDuration,
   formatPace,
   formatTime,
+  SPORT_COLOR,
+  SPORT_LABEL,
+  distanceUnit,
+  paceUnit,
 } from '@/utils/format';
+
+const VISIBILITY_OPTIONS: Array<{ value: ActivityVisibility; label: string; icon: string }> = [
+  { value: 'private',   label: 'Only me',  icon: 'lock-closed' },
+  { value: 'followers', label: 'Followers', icon: 'people' },
+  { value: 'everyone',  label: 'Everyone', icon: 'globe' },
+];
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const units = useRecordingStore((s) => s.units);
   const [activity, setActivity] = useState<Activity | null>(null);
 
   useEffect(() => {
@@ -49,6 +62,57 @@ export default function ActivityDetailScreen() {
       ? fitRegion(coords)
       : { latitude: 0, longitude: 0, latitudeDelta: 0.05, longitudeDelta: 0.05 };
 
+  const sportColor = SPORT_COLOR[activity.sport] ?? colors.accent;
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const onEditTitle = () => {
+    Alert.prompt(
+      'Rename Activity',
+      undefined,
+      async (text) => {
+        if (!text?.trim()) return;
+        await updateTitle(activity.id, text.trim());
+        setActivity((a) => a ? { ...a, title: text.trim() } : a);
+      },
+      'plain-text',
+      activity.title,
+    );
+  };
+
+  const onChangeVisibility = () => {
+    const options = VISIBILITY_OPTIONS.map((o) => o.label);
+    Alert.alert(
+      'Who can see this?',
+      undefined,
+      [
+        ...VISIBILITY_OPTIONS.map((o) => ({
+          text: o.label + (activity.visibility === o.value ? ' ✓' : ''),
+          onPress: async () => {
+            await updateVisibility(activity.id, o.value);
+            setActivity((a) => a ? { ...a, visibility: o.value } : a);
+          },
+        })),
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  };
+
+  const onShare = async () => {
+    const distStr = formatDistance(activity.distanceM, units);
+    const unit = distanceUnit(units);
+    const pace = formatPace(activity.avgPaceSPerKm, units);
+    await Share.share({
+      message: [
+        `🏃 ${activity.title}`,
+        `📍 ${distStr} ${unit}  ⏱ ${formatDuration(activity.movingS)}  ⚡ ${pace} /${unit}`,
+        `🏔 ${activity.elevationGainM} m elevation gain`,
+        `📅 ${formatDate(activity.startedAt)} · ${formatTime(activity.startedAt)}`,
+        `\nTracked with Athlr 🔥`,
+      ].join('\n'),
+    });
+  };
+
   const onDelete = () => {
     Alert.alert('Delete activity?', 'This cannot be undone.', [
       { text: 'Cancel', style: 'cancel' },
@@ -63,10 +127,24 @@ export default function ActivityDetailScreen() {
     ]);
   };
 
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
+  const visOpt = VISIBILITY_OPTIONS.find((o) => o.value === activity.visibility);
+
   return (
     <>
-      <Stack.Screen options={{ title: activity.title }} />
+      <Stack.Screen
+        options={{
+          title: activity.title,
+          headerRight: () => (
+            <Pressable onPress={onEditTitle} style={{ marginRight: spacing.m }}>
+              <Ionicons name="pencil" size={20} color={colors.accent} />
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        {/* Map */}
         <View style={styles.mapWrap}>
           <MapView
             style={StyleSheet.absoluteFill}
@@ -77,26 +155,48 @@ export default function ActivityDetailScreen() {
             zoomEnabled={false}
           >
             {coords.length > 1 && (
-              <Polyline coordinates={coords} strokeColor={colors.route} strokeWidth={4} />
+              <Polyline coordinates={coords} strokeColor={sportColor} strokeWidth={4} />
             )}
           </MapView>
+
+          {/* Sport badge overlay */}
+          <View style={[styles.sportBadge, { borderColor: sportColor }]}>
+            <Text style={[styles.sportBadgeText, { color: sportColor }]}>
+              {SPORT_LABEL[activity.sport]}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.body}>
-          <Text style={type.caption}>
-            {formatDate(activity.startedAt)} · {formatTime(activity.startedAt)}
-          </Text>
-
-          <View style={styles.statGrid}>
-            <Stat label="Distance · km" value={formatDistanceKm(activity.distanceM)} />
-            <Stat label="Moving time" value={formatDuration(activity.movingS)} />
-            <Stat label="Avg pace · /km" value={formatPace(activity.avgPaceSPerKm)} />
-            <Stat label="Elevation · m" value={String(activity.elevationGainM)} />
+          {/* Date + visibility */}
+          <View style={styles.metaRow}>
+            <Text style={type.caption}>
+              {formatDate(activity.startedAt)} · {formatTime(activity.startedAt)}
+            </Text>
+            <Pressable style={styles.visibilityBadge} onPress={onChangeVisibility}>
+              <Ionicons name={visOpt?.icon as never ?? 'lock-closed'} size={12} color={colors.textDim} />
+              <Text style={styles.visibilityText}>{visOpt?.label ?? 'Private'}</Text>
+            </Pressable>
           </View>
 
+          {/* 4-stat grid */}
+          <View style={styles.statGrid}>
+            <StatTile label={`Distance · ${distanceUnit(units)}`} value={formatDistance(activity.distanceM, units)} color={sportColor} />
+            <StatTile label="Moving Time" value={formatDuration(activity.movingS)} color={sportColor} />
+            <StatTile label={`Avg Pace · ${paceUnit(units)}`} value={formatPace(activity.avgPaceSPerKm, units)} color={sportColor} />
+            <StatTile label="Elevation · m" value={String(activity.elevationGainM)} color={sportColor} />
+          </View>
+
+          {/* Splits */}
           {activity.splits.length > 0 && (
             <View style={styles.card}>
               <Text style={type.label}>Splits</Text>
+              {/* Header */}
+              <View style={styles.splitHeader}>
+                <Text style={[styles.splitCol, { width: 24 }]}>#</Text>
+                <Text style={[styles.splitCol, { flex: 1 }]}>Pace</Text>
+                <Text style={[styles.splitCol, { width: 56, textAlign: 'right' }]}>Elev</Text>
+              </View>
               {activity.splits.map((s) => (
                 <View key={s.index} style={styles.splitRow}>
                   <Text style={styles.splitIndex}>{s.index}</Text>
@@ -104,25 +204,24 @@ export default function ActivityDetailScreen() {
                     <View
                       style={[
                         styles.splitBar,
-                        { width: `${barWidth(s.paceSPerKm, activity)}%` },
+                        { width: `${barWidth(s.paceSPerKm, activity)}%`, backgroundColor: sportColor },
                       ]}
                     />
                   </View>
-                  <Text style={styles.splitPace}>{formatPace(s.paceSPerKm)}</Text>
+                  <Text style={styles.splitPace}>{formatPace(s.paceSPerKm, units)}</Text>
+                  <Text style={styles.splitElev}>
+                    {s.elevationGainM > 0 ? `+${Math.round(s.elevationGainM)}m` : '—'}
+                  </Text>
                 </View>
               ))}
             </View>
           )}
 
+          {/* Action buttons */}
           <View style={styles.actions}>
-            <Pressable style={styles.actionButton} onPress={() => exportAndShareGpx(activity)}>
-              <Ionicons name="download-outline" size={18} color={colors.text} />
-              <Text style={styles.actionText}>Export GPX</Text>
-            </Pressable>
-            <Pressable style={[styles.actionButton, styles.deleteButton]} onPress={onDelete}>
-              <Ionicons name="trash-outline" size={18} color={colors.danger} />
-              <Text style={[styles.actionText, { color: colors.danger }]}>Delete</Text>
-            </Pressable>
+            <ActionButton icon="share-outline" label="Share" onPress={onShare} />
+            <ActionButton icon="download-outline" label="GPX" onPress={() => exportAndShareGpx(activity)} />
+            <ActionButton icon="trash-outline" label="Delete" onPress={onDelete} danger />
           </View>
         </View>
       </ScrollView>
@@ -130,16 +229,35 @@ export default function ActivityDetailScreen() {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatTile({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <View style={styles.statItem}>
       <Text style={type.label}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
     </View>
   );
 }
 
-/** Pace bar width relative to the slowest split (slow = long bar). */
+function ActionButton({
+  icon, label, onPress, danger,
+}: {
+  icon: string; label: string; onPress: () => void; danger?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[styles.actionButton, danger && styles.actionButtonDanger]}
+      onPress={onPress}
+    >
+      <Ionicons name={icon as never} size={18} color={danger ? colors.danger : colors.text} />
+      <Text style={[styles.actionText, danger && { color: colors.danger }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function barWidth(pace: number, a: Activity): number {
   const paces = a.splits.map((s) => s.paceSPerKm);
   const max = Math.max(...paces);
@@ -164,24 +282,53 @@ function fitRegion(coords: { latitude: number; longitude: number }[]) {
   };
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  loading: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bg,
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+
+  mapWrap: { height: 280, position: 'relative' },
+  sportBadge: {
+    position: 'absolute',
+    top: spacing.m,
+    left: spacing.m,
+    borderWidth: 1,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.m,
+    paddingVertical: 4,
+    backgroundColor: colors.bg + 'CC',
   },
-  mapWrap: { height: 260 },
+  sportBadgeText: { fontSize: 12, fontWeight: '700' },
+
   body: { padding: spacing.m, gap: spacing.m },
-  statGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  statItem: { width: '50%', marginBottom: spacing.m },
+
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.s,
+    paddingVertical: 4,
+  },
+  visibilityText: { fontSize: 12, color: colors.textDim, fontWeight: '600' },
+
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2 },
+  statItem: { width: '50%', paddingBottom: spacing.m },
   statValue: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.text,
     fontVariant: ['tabular-nums'],
+    marginTop: 2,
   },
+
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.card,
@@ -190,10 +337,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.s,
   },
+  splitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  splitCol: { ...type.label },
   splitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.m,
+    gap: spacing.s,
     marginTop: spacing.s,
   },
   splitIndex: {
@@ -201,21 +354,27 @@ const styles = StyleSheet.create({
     color: colors.textDim,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+    fontSize: 13,
   },
   splitBarWrap: { flex: 1, height: 10, justifyContent: 'center' },
-  splitBar: {
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.accent,
-  },
+  splitBar: { height: 10, borderRadius: 5 },
   splitPace: {
-    width: 56,
+    width: 52,
     textAlign: 'right',
     color: colors.text,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],
+    fontSize: 13,
   },
-  actions: { flexDirection: 'row', gap: spacing.m },
+  splitElev: {
+    width: 48,
+    textAlign: 'right',
+    color: colors.textDim,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  actions: { flexDirection: 'row', gap: spacing.s },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
@@ -228,6 +387,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  deleteButton: { borderColor: colors.danger },
-  actionText: { color: colors.text, fontWeight: '600' },
+  actionButtonDanger: { borderColor: colors.danger + '66' },
+  actionText: { color: colors.text, fontWeight: '600', fontSize: 14 },
 });

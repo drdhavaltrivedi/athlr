@@ -4,26 +4,27 @@ import { haversineM } from '@/utils/geo';
 /**
  * GPS reliability layer.
  *
- * "The tracking broke" is the #1 functional complaint against incumbent
- * apps, so every raw fix passes through this filter before it touches
- * distance, pace, or the map:
- *
+ * Every raw fix passes through 4 gates before touching distance/pace/map:
  *  1. Accuracy gate   — drop fixes with poor horizontal accuracy.
- *  2. Speed gate      — drop fixes implying impossible speed for the sport
- *                       (teleports across lakes, tunnel re-acquisition jumps).
- *  3. Jitter gate     — drop sub-meter wobble while standing still so the
- *                       distance doesn't creep up at red lights.
- *  4. Smoothing       — light exponential smoothing of lat/lng to remove
- *                       zig-zag without cutting real corners.
+ *  2. Speed gate      — drop fixes implying impossible speed for the sport.
+ *  3. Jitter gate     — drop sub-meter wobble while standing still.
+ *  4. Smoothing       — light EMA on lat/lng to remove zig-zag.
  */
 
 const MAX_ACCURACY_M = 35;
 
 const MAX_SPEED_M_S: Record<SportType, number> = {
-  walk: 3.5, // ~12.6 km/h
-  hike: 3.5,
-  run: 8.5, // ~30.6 km/h (covers sprint finishes)
-  ride: 25, // 90 km/h descents
+  walk:     3.5,   // ~12.6 km/h
+  hike:     3.5,
+  run:      8.5,   // ~30.6 km/h (covers sprint finishes)
+  ride:     25,    // 90 km/h descents
+  cycling:  25,
+  swim:     3,     // ~10.8 km/h (elite swimmer ~6)
+  yoga:     1,     // essentially stationary
+  workout:  5,     // indoor, minimal GPS movement
+  hiit:     6,
+  tennis:   10,    // quick lateral bursts
+  other:    20,
 };
 
 /** Minimum movement to register a new point (anti-jitter). */
@@ -49,22 +50,17 @@ export class GpsFilter {
     this.sport = sport;
   }
 
-  /**
-   * Returns the filtered point to append, or null if the fix was rejected.
-   */
   process(raw: TrackPoint): TrackPoint | null {
     // 1. Accuracy gate
     if (raw.accuracy != null && raw.accuracy > MAX_ACCURACY_M) return null;
 
     if (this.lastAccepted) {
       const dt = (raw.timestamp - this.lastAccepted.timestamp) / 1000;
-      if (dt <= 0) return null; // out-of-order fix
+      if (dt <= 0) return null;
 
       const d = haversineM(
-        this.lastAccepted.latitude,
-        this.lastAccepted.longitude,
-        raw.latitude,
-        raw.longitude,
+        this.lastAccepted.latitude, this.lastAccepted.longitude,
+        raw.latitude, raw.longitude,
       );
 
       // 2. Speed gate
@@ -80,10 +76,8 @@ export class GpsFilter {
       this.smoothedLat = raw.latitude;
       this.smoothedLng = raw.longitude;
     } else {
-      this.smoothedLat =
-        SMOOTHING_ALPHA * raw.latitude + (1 - SMOOTHING_ALPHA) * this.smoothedLat;
-      this.smoothedLng =
-        SMOOTHING_ALPHA * raw.longitude + (1 - SMOOTHING_ALPHA) * this.smoothedLng;
+      this.smoothedLat = SMOOTHING_ALPHA * raw.latitude + (1 - SMOOTHING_ALPHA) * this.smoothedLat;
+      this.smoothedLng = SMOOTHING_ALPHA * raw.longitude + (1 - SMOOTHING_ALPHA) * this.smoothedLng;
     }
 
     const accepted: TrackPoint = {
@@ -98,8 +92,7 @@ export class GpsFilter {
 
 /**
  * Auto-pause detection: returns true when recent fixes indicate the
- * athlete is effectively stationary. Uses reported speed when available,
- * with a distance fallback for devices that report null speed.
+ * athlete is effectively stationary.
  */
 export function isStationary(points: TrackPoint[], windowS = 8): boolean {
   if (points.length < 2) return false;
@@ -110,13 +103,11 @@ export function isStationary(points: TrackPoint[], windowS = 8): boolean {
   const speeds = recent.map((p) => p.speed).filter((s): s is number => s != null);
   if (speeds.length >= 2) {
     const avg = speeds.reduce((a, b) => a + b, 0) / speeds.length;
-    return avg < 0.5; // < 0.5 m/s
+    return avg < 0.5;
   }
   const d = haversineM(
-    recent[0].latitude,
-    recent[0].longitude,
-    recent[recent.length - 1].latitude,
-    recent[recent.length - 1].longitude,
+    recent[0].latitude, recent[0].longitude,
+    recent[recent.length - 1].latitude, recent[recent.length - 1].longitude,
   );
   return d < 4;
 }

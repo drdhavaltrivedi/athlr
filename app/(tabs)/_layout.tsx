@@ -12,16 +12,19 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          height: 60,
+          paddingBottom: 8,
         },
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textDim,
         sceneStyle: { backgroundColor: colors.bg },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Activities',
+          title: 'Feed',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="list" color={color} size={size} />
           ),
@@ -32,8 +35,21 @@ export default function TabLayout() {
         options={{
           title: 'Record',
           headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'radio-button-on' : 'radio-button-off'}
+              color={focused ? colors.accent : color}
+              size={focused ? 30 : 26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="log"
+        options={{
+          title: 'Log',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="radio-button-on" color={color} size={size} />
+            <Ionicons name="calendar" color={color} size={size} />
           ),
         }}
       />
@@ -42,7 +58,7 @@ export default function TabLayout() {
         options={{
           title: 'You',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" color={color} size={size} />
+            <Ionicons name="person-circle" color={color} size={size} />
           ),
         }}
       />

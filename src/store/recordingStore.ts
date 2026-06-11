@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Activity, RecordingSnapshot, SportType, TrackPoint } from '@/types';
+import { Activity, RecordingSnapshot, SportType, TrackPoint, Units } from '@/types';
 import { GpsFilter, isStationary } from '@/services/gpsFilter';
 import {
   computeSplits,
@@ -11,12 +11,16 @@ import { saveActivity } from '@/db/database';
 
 interface RecordingState extends RecordingSnapshot {
   autoPause: boolean;
+  units: Units;
+  displayName: string;
   /** internal: last tick timestamp for the elapsed clock */
   _lastTickMs: number | null;
   _filter: GpsFilter;
 
   setSport: (s: SportType) => void;
   setAutoPause: (v: boolean) => void;
+  setUnits: (u: Units) => void;
+  setDisplayName: (name: string) => void;
   start: () => void;
   pause: (manual?: boolean) => void;
   resume: () => void;
@@ -29,7 +33,7 @@ interface RecordingState extends RecordingSnapshot {
   discard: () => void;
 }
 
-const initial: RecordingSnapshot & { autoPause: boolean } = {
+const initial: RecordingSnapshot & { autoPause: boolean; units: Units; displayName: string } = {
   state: 'idle',
   sport: 'run',
   startedAt: null,
@@ -40,6 +44,8 @@ const initial: RecordingSnapshot & { autoPause: boolean } = {
   currentPaceSPerKm: null,
   points: [],
   autoPause: true,
+  units: 'km',
+  displayName: '',
 };
 
 export const useRecordingStore = create<RecordingState>((set, get) => ({
@@ -53,6 +59,8 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   },
 
   setAutoPause: (autoPause) => set({ autoPause }),
+  setUnits: (units) => set({ units }),
+  setDisplayName: (displayName) => set({ displayName }),
 
   start: () => {
     get()._filter.reset();
@@ -60,6 +68,8 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
       ...initial,
       sport: get().sport,
       autoPause: get().autoPause,
+      units: get().units,
+      displayName: get().displayName,
       state: 'recording',
       startedAt: Date.now(),
       _lastTickMs: Date.now(),
@@ -72,6 +82,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
 
   tick: () => {
     const s = get();
+    // BUG FIX: only increment movingS when actually recording, not paused
     if (s.state !== 'recording') return;
     const now = Date.now();
     const dt = s._lastTickMs ? (now - s._lastTickMs) / 1000 : 1;
@@ -103,7 +114,6 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
       currentPaceSPerKm: rollingPaceSPerKm(points),
     });
 
-    // Auto-pause: stationary for a while -> pause; resume handled by movement
     if (s.autoPause && isStationary(points)) {
       set({ state: 'paused', _lastTickMs: null });
     }
@@ -131,19 +141,19 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
       elevationGainM: Math.round(s.elevationGainM),
       avgPaceSPerKm:
         s.distanceM > 10 ? Math.round(s.movingS / (s.distanceM / 1000)) : 0,
-      visibility: 'private', // private by default — our core promise
+      visibility: 'private',
       points: s.points,
       splits: computeSplits(s.points),
     };
 
     await saveActivity(activity);
-    set({ ...initial, sport: s.sport, autoPause: s.autoPause, _lastTickMs: null });
+    set({ ...initial, sport: s.sport, autoPause: s.autoPause, units: s.units, displayName: s.displayName, _lastTickMs: null });
     return activity;
   },
 
   discard: () => {
     const s = get();
-    set({ ...initial, sport: s.sport, autoPause: s.autoPause, _lastTickMs: null });
+    set({ ...initial, sport: s.sport, autoPause: s.autoPause, units: s.units, displayName: s.displayName, _lastTickMs: null });
   },
 }));
 
@@ -151,10 +161,17 @@ function defaultTitle(sport: SportType, startedAt: number): string {
   const h = new Date(startedAt).getHours();
   const part = h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
   const name: Record<SportType, string> = {
-    run: 'Run',
-    ride: 'Ride',
-    walk: 'Walk',
-    hike: 'Hike',
+    run:     'Run',
+    ride:    'Ride',
+    walk:    'Walk',
+    hike:    'Hike',
+    swim:    'Swim',
+    yoga:    'Yoga',
+    workout: 'Workout',
+    hiit:    'HIIT Session',
+    cycling: 'Cycling Ride',
+    tennis:  'Tennis Match',
+    other:   'Activity',
   };
   return `${part} ${name[sport]}`;
 }

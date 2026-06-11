@@ -2,7 +2,20 @@
  * Core domain types for Athlr.
  */
 
-export type SportType = 'run' | 'ride' | 'walk' | 'hike';
+export type SportType =
+  | 'run'
+  | 'ride'
+  | 'walk'
+  | 'hike'
+  | 'swim'
+  | 'yoga'
+  | 'workout'
+  | 'hiit'
+  | 'cycling'
+  | 'tennis'
+  | 'other';
+
+export type Units = 'km' | 'mi';
 
 export interface TrackPoint {
   latitude: number;
@@ -67,4 +80,18 @@ export interface RecordingSnapshot {
   elevationGainM: number;
   currentPaceSPerKm: number | null;
   points: TrackPoint[];
+}
+
+export interface DayActivity {
+  date: string;   // YYYY-MM-DD
+  count: number;
+  distanceM: number;
+}
+
+export interface WeekStats {
+  activeDays: number;
+  distanceM: number;
+  movingS: number;
+  elevationGainM: number;
+  activities: number;
 }

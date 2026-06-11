@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -19,15 +20,29 @@ import {
   stopTracking,
 } from '@/services/locationService';
 import { colors, radii, spacing, type } from '@/theme';
-import { formatDistanceKm, formatDuration, formatPace, SPORT_LABEL } from '@/utils/format';
+import {
+  formatDistance,
+  formatDuration,
+  formatPace,
+  distanceUnit,
+  paceUnit,
+  SPORT_ICON,
+  SPORT_LABEL,
+  SPORT_COLOR,
+} from '@/utils/format';
 import { SportType } from '@/types';
 
-const SPORTS: SportType[] = ['run', 'ride', 'walk', 'hike'];
+const SPORTS: SportType[] = [
+  'run', 'ride', 'walk', 'hike',
+  'swim', 'cycling', 'workout', 'hiit',
+  'yoga', 'tennis', 'other',
+];
 
 export default function RecordScreen() {
   useKeepAwake();
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [region, setRegion] = useState({
     latitude: 37.7749,
     longitude: -122.4194,
@@ -36,11 +51,12 @@ export default function RecordScreen() {
   });
 
   const {
-    state, sport, points, distanceM, movingS, currentPaceSPerKm,
-    setSport, start, pause, resume, tick, finish, discard,
+    state, sport, points, distanceM, movingS, elapsedS,
+    currentPaceSPerKm, elevationGainM,
+    units, setSport, start, pause, resume, tick, finish, discard,
   } = useRecordingStore();
 
-  // 1s clock while recording
+  // 1 s clock while recording
   useEffect(() => {
     if (state !== 'recording') return;
     const id = setInterval(() => tick(), 1000);
@@ -67,6 +83,19 @@ export default function RecordScreen() {
     );
   }, [points.length]);
 
+  // Countdown timer
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      start();
+      startTracking();
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => (c ?? 1) - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, start]);
+
   const onStart = async () => {
     const perms = await requestPermissions();
     if (!perms.foreground) {
@@ -79,11 +108,10 @@ export default function RecordScreen() {
     if (!perms.background) {
       Alert.alert(
         'Heads up',
-        'Background location is off — recording will pause if the screen locks. You can enable "Allow all the time" in Settings.',
+        'Background location is off — recording will pause if the screen locks. Enable "Allow all the time" in Settings.',
       );
     }
-    start();
-    await startTracking();
+    setCountdown(3);
   };
 
   const onFinish = () => {
@@ -117,8 +145,11 @@ export default function RecordScreen() {
     longitude: p.longitude,
   }));
 
+  const sportColor = SPORT_COLOR[sport] ?? colors.accent;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Map */}
       <View style={styles.mapWrap}>
         <MapView
           ref={mapRef}
@@ -129,55 +160,103 @@ export default function RecordScreen() {
           userInterfaceStyle="dark"
         >
           {routeCoords.length > 1 && (
-            <Polyline coordinates={routeCoords} strokeColor={colors.route} strokeWidth={5} />
+            <Polyline
+              coordinates={routeCoords}
+              strokeColor={sportColor}
+              strokeWidth={5}
+            />
           )}
         </MapView>
 
+        {/* Sport picker — idle only */}
         {state === 'idle' && (
-          <View style={styles.sportPicker}>
-            {SPORTS.map((s) => (
-              <Pressable
-                key={s}
-                onPress={() => setSport(s)}
-                style={[styles.sportChip, sport === s && styles.sportChipActive]}
-              >
-                <Text style={[styles.sportChipText, sport === s && styles.sportChipTextActive]}>
-                  {SPORT_LABEL[s]}
-                </Text>
-              </Pressable>
-            ))}
+          <View style={styles.sportPickerWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.sportPicker}
+            >
+              {SPORTS.map((s) => (
+                <Pressable
+                  key={s}
+                  onPress={() => setSport(s)}
+                  style={[
+                    styles.sportChip,
+                    sport === s && { backgroundColor: SPORT_COLOR[s] + '33', borderColor: SPORT_COLOR[s] },
+                  ]}
+                >
+                  <Ionicons
+                    name={SPORT_ICON[s] as never}
+                    size={16}
+                    color={sport === s ? SPORT_COLOR[s] : colors.textDim}
+                  />
+                  <Text style={[styles.sportChipText, sport === s && { color: SPORT_COLOR[s] }]}>
+                    {SPORT_LABEL[s]}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
         )}
 
+        {/* Paused banner */}
         {state === 'paused' && (
           <View style={styles.pausedBanner}>
-            <Text style={styles.pausedText}>PAUSED</Text>
+            <Text style={styles.pausedText}>⏸ PAUSED</Text>
+          </View>
+        )}
+
+        {/* Countdown overlay */}
+        {countdown !== null && (
+          <View style={styles.countdownOverlay}>
+            <Text style={styles.countdownNumber}>
+              {countdown === 0 ? 'GO!' : countdown}
+            </Text>
+            <Text style={styles.countdownLabel}>Get ready</Text>
           </View>
         )}
       </View>
 
-      {/* Stats panel — the signature: numbers carry the screen */}
+      {/* Stats panel */}
       <View style={styles.panel}>
-        <View style={styles.statRow}>
-          <View style={styles.statMain}>
-            <Text style={type.label}>Distance · km</Text>
-            <Text style={type.stat}>{formatDistanceKm(distanceM)}</Text>
-          </View>
+        {/* Primary stat — distance */}
+        <View style={styles.primaryStat}>
+          <Text style={type.label}>{`Distance · ${distanceUnit(units)}`}</Text>
+          <Text style={type.stat}>{formatDistance(distanceM, units)}</Text>
         </View>
+
+        {/* Secondary row */}
         <View style={styles.statRow}>
           <View style={styles.statHalf}>
-            <Text style={type.label}>Time</Text>
+            <Text style={type.label}>Moving Time</Text>
             <Text style={type.statSmall}>{formatDuration(movingS)}</Text>
           </View>
           <View style={styles.statHalf}>
-            <Text style={type.label}>Pace · /km</Text>
-            <Text style={type.statSmall}>{formatPace(currentPaceSPerKm)}</Text>
+            <Text style={type.label}>{`Pace · ${paceUnit(units)}`}</Text>
+            <Text style={type.statSmall}>{formatPace(currentPaceSPerKm, units)}</Text>
           </View>
         </View>
 
+        {/* Tertiary row — elevation + elapsed */}
+        {state !== 'idle' && (
+          <View style={styles.statRow}>
+            <View style={styles.statHalf}>
+              <Text style={type.label}>Elev Gain · m</Text>
+              <Text style={[type.statSmall, styles.smallStat]}>
+                {Math.round(elevationGainM)}
+              </Text>
+            </View>
+            <View style={styles.statHalf}>
+              <Text style={type.label}>Elapsed</Text>
+              <Text style={[type.statSmall, styles.smallStat]}>{formatDuration(elapsedS)}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Controls */}
         <View style={styles.controls}>
           {state === 'idle' && (
-            <Pressable style={styles.startButton} onPress={onStart}>
+            <Pressable style={[styles.startButton, { backgroundColor: sportColor }]} onPress={onStart}>
               <Text style={styles.startText}>START</Text>
             </Pressable>
           )}
@@ -210,34 +289,60 @@ export default function RecordScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   mapWrap: { flex: 1 },
-  sportPicker: {
+
+  sportPickerWrap: {
     position: 'absolute',
     top: spacing.m,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    padding: spacing.xs,
-    gap: spacing.xs,
+    left: 0,
+    right: 0,
+  },
+  sportPicker: {
+    paddingHorizontal: spacing.m,
+    gap: spacing.s,
   },
   sportChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.surface + 'EE',
+    borderRadius: radii.pill,
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
-    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  sportChipActive: { backgroundColor: colors.accent },
-  sportChipText: { color: colors.textDim, fontWeight: '600' },
-  sportChipTextActive: { color: colors.bg },
+  sportChipText: { color: colors.textDim, fontWeight: '600', fontSize: 13 },
+
   pausedBanner: {
     position: 'absolute',
     top: spacing.m,
     alignSelf: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surface + 'EE',
     paddingHorizontal: spacing.l,
     paddingVertical: spacing.s,
     borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.accent,
   },
   pausedText: { ...type.label, color: colors.accent },
+
+  countdownOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11,18,32,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countdownNumber: {
+    fontSize: 100,
+    fontWeight: '900',
+    color: colors.accent,
+    letterSpacing: -4,
+  },
+  countdownLabel: {
+    ...type.label,
+    marginTop: spacing.s,
+  },
+
   panel: {
     backgroundColor: colors.bg,
     paddingHorizontal: spacing.l,
@@ -245,10 +350,13 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.l,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    gap: spacing.m,
   },
-  statRow: { flexDirection: 'row', marginBottom: spacing.m },
-  statMain: { flex: 1, alignItems: 'center' },
+  primaryStat: { alignItems: 'center' },
+  statRow: { flexDirection: 'row' },
   statHalf: { flex: 1, alignItems: 'center' },
+  smallStat: { fontSize: 22 },
+
   controls: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -256,7 +364,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.s,
   },
   startButton: {
-    backgroundColor: colors.accent,
     paddingHorizontal: 56,
     paddingVertical: 18,
     borderRadius: radii.pill,

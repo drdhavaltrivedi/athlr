@@ -1,9 +1,9 @@
 import * as SQLite from 'expo-sqlite';
-import { Activity, ActivitySummary } from '@/types';
+import { Activity, ActivitySummary, DayActivity, WeekStats } from '@/types';
 
 /**
  * Offline-first storage. Every activity lives on-device in SQLite;
- * cloud sync (when added) reads from here and marks rows synced.
+ * cloud sync reads from here and marks rows synced.
  * The app must never lose a workout because of a network problem.
  */
 
@@ -39,6 +39,8 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
+// ─── Write ────────────────────────────────────────────────────────────────────
+
 export async function saveActivity(a: Activity): Promise<void> {
   const db = await getDb();
   await db.runAsync(
@@ -47,38 +49,54 @@ export async function saveActivity(a: Activity): Promise<void> {
       distance_m, elevation_gain_m, avg_pace_s_per_km, visibility,
       points_json, splits_json, synced)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-    a.id,
-    a.sport,
-    a.title,
-    a.startedAt,
-    a.endedAt,
-    a.elapsedS,
-    a.movingS,
-    a.distanceM,
-    a.elevationGainM,
-    a.avgPaceSPerKm,
-    a.visibility,
-    JSON.stringify(a.points),
-    JSON.stringify(a.splits),
+    a.id, a.sport, a.title, a.startedAt, a.endedAt, a.elapsedS,
+    a.movingS, a.distanceM, a.elevationGainM, a.avgPaceSPerKm,
+    a.visibility, JSON.stringify(a.points), JSON.stringify(a.splits),
   );
 }
 
-export async function listActivities(limit = 50): Promise<ActivitySummary[]> {
+export async function updateTitle(id: string, title: string): Promise<void> {
   const db = await getDb();
-  const rows = await db.getAllAsync<Record<string, unknown>>(
-    `SELECT id, sport, title, started_at, ended_at, elapsed_s, moving_s,
-            distance_m, elevation_gain_m, avg_pace_s_per_km, visibility
-     FROM activities ORDER BY started_at DESC LIMIT ?`,
-    limit,
-  );
+  await db.runAsync(`UPDATE activities SET title = ? WHERE id = ?`, title, id);
+}
+
+export async function updateVisibility(id: string, visibility: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(`UPDATE activities SET visibility = ? WHERE id = ?`, visibility, id);
+}
+
+export async function deleteActivity(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(`DELETE FROM activities WHERE id = ?`, id);
+}
+
+// ─── Read ─────────────────────────────────────────────────────────────────────
+
+export async function listActivities(
+  limit = 100,
+  sport?: string,
+): Promise<ActivitySummary[]> {
+  const db = await getDb();
+  const rows = sport && sport !== 'all'
+    ? await db.getAllAsync<Record<string, unknown>>(
+        `SELECT id, sport, title, started_at, ended_at, elapsed_s, moving_s,
+                distance_m, elevation_gain_m, avg_pace_s_per_km, visibility
+         FROM activities WHERE sport = ? ORDER BY started_at DESC LIMIT ?`,
+        sport, limit,
+      )
+    : await db.getAllAsync<Record<string, unknown>>(
+        `SELECT id, sport, title, started_at, ended_at, elapsed_s, moving_s,
+                distance_m, elevation_gain_m, avg_pace_s_per_km, visibility
+         FROM activities ORDER BY started_at DESC LIMIT ?`,
+        limit,
+      );
   return rows.map(rowToSummary);
 }
 
 export async function getActivity(id: string): Promise<Activity | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<Record<string, unknown>>(
-    `SELECT * FROM activities WHERE id = ?`,
-    id,
+    `SELECT * FROM activities WHERE id = ?`, id,
   );
   if (!row) return null;
   return {
@@ -88,15 +106,7 @@ export async function getActivity(id: string): Promise<Activity | null> {
   };
 }
 
-export async function deleteActivity(id: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(`DELETE FROM activities WHERE id = ?`, id);
-}
-
-export async function updateTitle(id: string, title: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(`UPDATE activities SET title = ? WHERE id = ?`, title, id);
-}
+// ─── Aggregate stats ──────────────────────────────────────────────────────────
 
 export interface LifetimeStats {
   count: number;
@@ -114,15 +124,82 @@ export async function lifetimeStats(): Promise<LifetimeStats> {
             COALESCE(SUM(elevation_gain_m), 0) AS elevationGainM
      FROM activities`,
   );
-  return (
-    (row as LifetimeStats | null) ?? {
-      count: 0,
-      distanceM: 0,
-      movingS: 0,
-      elevationGainM: 0,
-    }
-  );
+  return (row as LifetimeStats | null) ?? { count: 0, distanceM: 0, movingS: 0, elevationGainM: 0 };
 }
+
+export async function weekStats(): Promise<WeekStats> {
+  const db = await getDb();
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+  const startMs = monday.getTime();
+
+  const row = await db.getFirstAsync<Record<string, number>>(
+    `SELECT COUNT(*) AS activities,
+            COUNT(DISTINCT date(started_at/1000, 'unixepoch')) AS activeDays,
+            COALESCE(SUM(distance_m), 0) AS distanceM,
+            COALESCE(SUM(moving_s), 0) AS movingS,
+            COALESCE(SUM(elevation_gain_m), 0) AS elevationGainM
+     FROM activities WHERE started_at >= ?`,
+    startMs,
+  );
+  return (row as WeekStats | null) ?? { activities: 0, activeDays: 0, distanceM: 0, movingS: 0, elevationGainM: 0 };
+}
+
+export async function monthStats(): Promise<WeekStats> {
+  const db = await getDb();
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const row = await db.getFirstAsync<Record<string, number>>(
+    `SELECT COUNT(*) AS activities,
+            COUNT(DISTINCT date(started_at/1000, 'unixepoch')) AS activeDays,
+            COALESCE(SUM(distance_m), 0) AS distanceM,
+            COALESCE(SUM(moving_s), 0) AS movingS,
+            COALESCE(SUM(elevation_gain_m), 0) AS elevationGainM
+     FROM activities WHERE started_at >= ?`,
+    startOfMonth,
+  );
+  return (row as WeekStats | null) ?? { activities: 0, activeDays: 0, distanceM: 0, movingS: 0, elevationGainM: 0 };
+}
+
+/** Per-day activity data for the calendar heatmap (last 90 days). */
+export async function calendarData(days = 90): Promise<DayActivity[]> {
+  const db = await getDb();
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    `SELECT date(started_at/1000, 'unixepoch') AS date,
+            COUNT(*) AS count,
+            COALESCE(SUM(distance_m), 0) AS distanceM
+     FROM activities
+     WHERE started_at >= ?
+     GROUP BY date
+     ORDER BY date ASC`,
+    since,
+  );
+  return rows.map((r) => ({
+    date: r.date as string,
+    count: r.count as number,
+    distanceM: r.distanceM as number,
+  }));
+}
+
+/** Activities for a specific ISO date string (YYYY-MM-DD). */
+export async function activitiesForDay(date: string): Promise<ActivitySummary[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    `SELECT id, sport, title, started_at, ended_at, elapsed_s, moving_s,
+            distance_m, elevation_gain_m, avg_pace_s_per_km, visibility
+     FROM activities
+     WHERE date(started_at/1000, 'unixepoch') = ?
+     ORDER BY started_at DESC`,
+    date,
+  );
+  return rows.map(rowToSummary);
+}
+
+// ─── Row mapper ───────────────────────────────────────────────────────────────
 
 function rowToSummary(row: Record<string, unknown>): ActivitySummary {
   return {
