@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcrun simctl *)",
+      "Bash(npx expo *)",
+      "Bash(echo \"Started with PID $!\")",
+      "Bash(jobs)",
+      "Bash(tmux new-session *)",
+      "Bash(tmux send-keys *)",
+      "Bash(npm install *)"
+    ]
+  }
+}
