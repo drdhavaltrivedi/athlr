@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import {
   createUserWithEmailAndPassword,
@@ -60,19 +60,21 @@ export default function AuthScreen() {
         
         // Update Firebase Auth profile
         const displayName = name.trim() || localDisplayName || 'Athlete';
-        await updateProfile(cred.user, { displayName });
-
-        // Create user document in Firestore
-        await setDoc(doc(db, 'users', cred.user.uid), {
-          displayName,
-          createdAt: Date.now(),
-          stats: {
-            activities: 0,
-            distanceM: 0,
-            movingS: 0,
-            elevationGainM: 0,
-          },
-        });
+        
+        // Run profile updates in the background to make signup feel instantaneous
+        Promise.all([
+          updateProfile(cred.user, { displayName }),
+          setDoc(doc(db, 'users', cred.user.uid), {
+            displayName,
+            createdAt: Date.now(),
+            stats: {
+              activities: 0,
+              distanceM: 0,
+              movingS: 0,
+              elevationGainM: 0,
+            },
+          })
+        ]).catch(err => console.error('Failed to initialize user profile:', err));
       }
       
       // On success, go back to profile or wherever they came from
@@ -131,7 +133,9 @@ export default function AuthScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <>
+      <Stack.Screen options={{ title: '' }} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -218,7 +222,8 @@ export default function AuthScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </>
   );
 }
 
