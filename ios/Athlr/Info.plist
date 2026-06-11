@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Tempo</string>
+    <string>Athlr</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1.0</string>
+    <string>1.0.0</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -27,8 +27,14 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>tempo</string>
-          <string>com.yourcompany.tempo</string>
+          <string>athlr</string>
+          <string>com.brilwors.athlr</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.455854898290-al6qt69ku3o3p786f6dvhp5aq59skcb9</string>
         </array>
       </dict>
     </array>
@@ -45,12 +51,16 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Athlr reads your workouts, heart rate, and routes from Apple Health so you can see all your activity in one place — including data from Apple Watch, Garmin, and other apps.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>Athlr can write completed activities to Apple Health so your workouts appear in your health record.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Tempo tracks your activity in the background so your route keeps recording when the screen is off.</string>
+    <string>Athlr tracks your activity in the background so your route keeps recording when the screen is off.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Tempo uses your location to track your runs, rides and walks.</string>
+    <string>Athlr uses your location to track your runs, rides and walks.</string>
     <key>NSUserActivityTypes</key>
     <array>
       <string>$(PRODUCT_BUNDLE_IDENTIFIER).expo.index_route</string>

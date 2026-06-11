@@ -1,4 +1,4 @@
-package com.yourcompany.tempo
+package com.brilwors.athlr
 
 import android.os.Build
 import android.os.Bundle

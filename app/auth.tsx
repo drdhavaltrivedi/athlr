@@ -206,12 +206,12 @@ export default function AuthScreen() {
           disabled={loading || googleLoading}
         >
           {googleLoading ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color="#000000" />
           ) : (
-            <>
-              <Ionicons name="logo-google" size={20} color={colors.text} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="logo-google" size={20} color="#000000" />
               <Text style={styles.googleBtnText}>Continue with Google</Text>
-            </>
+            </View>
           )}
         </Pressable>
       </View>
