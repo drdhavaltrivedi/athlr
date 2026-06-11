@@ -55,14 +55,34 @@ export default function TabLayout() {
       <Tabs.Screen
         name="record"
         options={{
-          title: 'Record',
+          title: '',
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'radio-button-on' : 'radio-button-off'}
-              color={focused ? colors.accent : color}
-              size={focused ? 30 : 26}
-            />
+            <View
+              style={{
+                top: -15,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: colors.accent,
+                justifyContent: 'center',
+                alignItems: 'center',
+                shadowColor: colors.accent,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 5,
+                borderWidth: 4,
+                borderColor: colors.surface,
+              }}
+            >
+              <Ionicons
+                name="add"
+                color={colors.bg}
+                size={32}
+                style={{ marginLeft: 2 }} // visual center
+              />
+            </View>
           ),
         }}
       />

@@ -6,9 +6,11 @@ import {
   StyleSheet,
   Text,
   View,
+  Dimensions,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BarChart } from 'react-native-chart-kit';
 import {
   activitiesForDay,
   calendarData,
@@ -89,10 +91,57 @@ export default function LogScreen() {
     setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.m, gap: spacing.m }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.m, gap: spacing.l }}>
+      
+      <Text style={[type.h2, { marginBottom: spacing.xs, marginTop: spacing.s }]}>Training Log</Text>
+
       {/* This week */}
       {week && (
-        <StatCard title="This Week" stats={week} units={units} />
+        <View style={styles.card}>
+          <Text style={type.label}>This Week</Text>
+          <View style={styles.statRow}>
+            <StatItem icon="bicycle" label="Activities" value={String(week.activities)} />
+            <StatItem icon="location" label={`Dist · ${distanceUnit(units)}`} value={formatDistance(week.distanceM, units, 1)} />
+            <StatItem icon="time" label="Time" value={formatDuration(week.movingS)} />
+            <StatItem icon="trending-up" label="Elev · m" value={String(Math.round(week.elevationGainM))} />
+          </View>
+          
+          {/* Week Chart */}
+          {calendar.length >= 7 && (
+            <View style={{ marginTop: spacing.l, alignItems: 'center' }}>
+              <BarChart
+                data={{
+                  labels: DAYS_OF_WEEK,
+                  datasets: [
+                    {
+                      data: calendar.slice(-7).map(d => Number(formatDistance(d.distanceM, units, 1)))
+                    }
+                  ]
+                }}
+                width={Dimensions.get("window").width - spacing.m * 2 - spacing.l * 2}
+                height={160}
+                yAxisLabel=""
+                yAxisSuffix=""
+                withInnerLines={false}
+                showValuesOnTopOfBars={true}
+                fromZero={true}
+                chartConfig={{
+                  backgroundColor: colors.surface,
+                  backgroundGradientFrom: colors.surface,
+                  backgroundGradientTo: colors.surface,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => colors.accent,
+                  labelColor: (opacity = 1) => colors.textDim,
+                  barPercentage: 0.6,
+                }}
+                style={{
+                  borderRadius: radii.card,
+                  paddingRight: 0,
+                }}
+              />
+            </View>
+          )}
+        </View>
       )}
 
       {/* This month */}
