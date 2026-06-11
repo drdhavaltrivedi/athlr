@@ -63,6 +63,16 @@ export const type = {
     fontWeight: '700' as const,
     color: colors.text,
   },
+  h2: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: colors.text,
+  },
+  h3: {
+    fontSize: 18,
+    fontWeight: '600' as const,
+    color: colors.text,
+  },
   body: {
     fontSize: 15,
     color: colors.text,
