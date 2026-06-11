@@ -57,26 +57,26 @@ The fitness tracking market is dominated by **Strava**, **Garmin Connect**, and 
 
 - 🗺️ **GPS Activity Recording** — Real-time tracking with route polyline on a live map
 - ⏸️ **Auto-Pause / Manual Pause** — Clock stops when you stop moving (configurable)
-- 📊 **Live Stats Panel** — Distance (km), moving time, current pace (min/km) updated every second
-- 🏃 **Sport Types** — Run, Ride, Walk, Hike (expandable to 50+)
-- 📐 **Per-Kilometer Splits** — Automatically computed with pace bar visualisation
-- 📍 **Background Tracking** — GPS keeps recording when screen locks (Android foreground service + iOS background mode)
+- 📊 **Live Stats Panel** — Distance (km/mi), moving time, current pace (min/km or min/mi) updated every second
+- 🏃 **Sport Types** — Run, Ride, Walk, Hike, Swim, Yoga, HIIT, Strength, Tennis, and more.
+- 📐 **Per-Kilometer/Mile Splits** — Automatically computed with pace bar visualisation
+- 📍 **Background Tracking** — GPS keeps recording when screen locks
 - 🗃️ **Offline SQLite Storage** — All activities stored on-device; nothing sent anywhere
-- 📤 **GPX Export** — Share standard GPX files to any app (Komoot, Strava, Garmin)
+- 📤 **GPX Export** — Share standard GPX files to any app
+- 📸 **Share as Image** — Generate a beautiful, Instagram-ready map and stats card to share.
+- ☁️ **Cloud Backup & Sync** — Securely sync your offline activities to Firebase Firestore so you never lose them.
+- 🤝 **Social Feed** — Follow your friends and view their public activities in a customized community feed.
 - 🔒 **Private by Default** — Visibility is `private` unless you explicitly change it
-- 📈 **Lifetime Stats** — Total activities, distance, moving time, elevation gain
+- 📈 **Lifetime & Training Stats** — Total activities, distance, moving time, elevation gain, calendar heatmaps, and weekly/monthly breakdowns.
+- ✏️ **Edit Activities** — Title editing and visibility toggles per activity.
 - 🧹 **Clean Delete** — Remove any activity with its full GPS trace
 
 ### In Progress / Planned
 
-- Training Log calendar heatmap
-- Weekly & monthly stat breakdowns
-- Expanded sport types (swim, yoga, HIIT, strength, tennis…)
-- Title editing & visibility toggle per activity
-- km / miles unit toggle
-- Share summary card (image)
-- Firebase cloud sync (opt-in)
-- Social: following, kudos, activity feed
+- Apple Health / Google Fit export
+- Advanced segment leaderboards
+- Offline maps download
+- Apple Watch / WearOS companion apps
 
 ---
 
