@@ -12,7 +12,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { listActivities } from '@/db/database';
-import { getCommunityFeed } from '@/services/cloudSyncService';
+import { getCommunityFeed, toggleKudo } from '@/services/cloudSyncService';
 import { useAuthStore } from '@/store/authStore';
 import { ActivitySummary, SportType } from '@/types';
 import { colors, radii, spacing, type } from '@/theme';
@@ -171,6 +171,22 @@ function ActivityCard({
   onPress: () => void;
 }) {
   const sportColor = SPORT_COLOR[item.sport] ?? colors.accent;
+  const [kudos, setKudos] = useState(item.kudosCount || 0);
+  const [given, setGiven] = useState(false);
+
+  const handleKudo = async (e: any) => {
+    e.stopPropagation();
+    // Optimistic UI update
+    const newGiven = !given;
+    setGiven(newGiven);
+    setKudos((k: number) => newGiven ? k + 1 : k - 1);
+    const success = await toggleKudo(item.id);
+    if (!success) {
+      // revert if failed
+      setGiven(!newGiven);
+      setKudos((k: number) => !newGiven ? k + 1 : k - 1);
+    }
+  };
 
   return (
     <Pressable style={[styles.card, { borderLeftColor: sportColor, borderLeftWidth: 3 }]} onPress={onPress}>
@@ -195,12 +211,33 @@ function ActivityCard({
         )}
       </View>
 
+      {/* Map Thumbnail */}
+      {!!item.mapUrl && (
+        <View style={styles.mapWrap}>
+          <Image source={{ uri: item.mapUrl }} style={styles.mapThumb} />
+        </View>
+      )}
+
       {/* Stats grid */}
       <View style={styles.statsGrid}>
         <StatCell label={`Distance · ${distanceUnit(units)}`} value={formatDistance(item.distanceM, units)} />
         <StatCell label="Moving Time" value={formatDuration(item.movingS)} />
         <StatCell label={`Pace · ${paceUnit(units)}`} value={formatPace(item.avgPaceSPerKm, units)} />
         <StatCell label="Elev · m" value={String(Math.round(item.elevationGainM))} />
+    </View>
+
+      {/* Kudos Footer */}
+      <View style={styles.cardFooter}>
+        <Pressable style={styles.kudoBtn} onPress={handleKudo}>
+          <Ionicons 
+            name={given ? "heart" : "heart-outline"} 
+            size={20} 
+            color={given ? colors.accent : colors.textDim} 
+          />
+          <Text style={[styles.kudoText, given && { color: colors.accent }]}>
+            {kudos} {kudos === 1 ? 'Kudo' : 'Kudos'}
+          </Text>
+        </Pressable>
       </View>
     </Pressable>
   );
@@ -367,5 +404,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  mapWrap: {
+    height: 140,
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.card,
+    overflow: 'hidden',
+    marginBottom: spacing.m,
+  },
+  mapThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  cardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.m,
+    marginTop: spacing.m,
+    flexDirection: 'row',
+  },
+  kudoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingRight: spacing.m,
+    gap: 6,
+  },
+  kudoText: {
+    color: colors.textDim,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

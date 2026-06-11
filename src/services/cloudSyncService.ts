@@ -1,6 +1,7 @@
 import { collection, doc, setDoc, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { Activity } from '@/types';
+import polyline from '@mapbox/polyline';
 
 /**
  * Uploads an activity to Firestore so it appears in the global feed.
@@ -20,12 +21,26 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
   try {
     const activityRef = doc(db, 'activities', activity.id);
     
+    // Generate encoded polyline and Static Map URL if we have points
+    let mapUrl = '';
+    if (activity.points && activity.points.length > 2) {
+      // Downsample points to avoid URL length limits for very long routes
+      const step = Math.ceil(activity.points.length / 200);
+      const coords = activity.points.filter((_, i) => i % step === 0).map(p => [p.latitude, p.longitude] as [number, number]);
+      const enc = polyline.encode(coords);
+      // Use the Firebase API Key as the Google Maps Key. (Note: Ensure Static Maps API is enabled in GCP)
+      const apiKey = '***REMOVED***'; 
+      mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x400&path=weight:4%7Ccolor:0xfe5c36ff%7Cenc:${enc}&key=${apiKey}`;
+    }
+    
     // Create a lean version of the activity for the feed
     const cloudActivity = {
       ...activity,
       uid: user.uid,
       userName: user.displayName || 'Athlete',
       syncedAt: serverTimestamp(),
+      mapUrl,
+      kudosCount: 0,
       points: [], // DONT UPLOAD 1000s of GPS POINTS to firestore to save read/write costs
     };
 

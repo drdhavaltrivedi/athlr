@@ -67,6 +67,8 @@ export interface Activity {
   splits: Split[];
   userName?: string;
   uid?: string;
+  mapUrl?: string;
+  kudosCount?: number;
 }
 
 /** Lightweight row used for lists (points not loaded). */
