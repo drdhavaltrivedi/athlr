@@ -127,7 +127,7 @@ const HK_PERMISSIONS = {
 let hkInitialized = false;
 
 async function initializeHK(): Promise<boolean> {
-  if (!AppleHealthKit) return false;
+  if (!AppleHealthKit || typeof AppleHealthKit.initHealthKit !== 'function') return false;
   return new Promise((resolve) => {
     AppleHealthKit.initHealthKit(HK_PERMISSIONS, (err: unknown) => {
       if (err) { resolve(false); return; }
@@ -138,7 +138,7 @@ async function initializeHK(): Promise<boolean> {
 }
 
 async function importFromHealthKit(since: Date): Promise<ImportedWorkout[]> {
-  if (!AppleHealthKit || !hkInitialized) return [];
+  if (!AppleHealthKit || !hkInitialized || typeof AppleHealthKit.getSamples !== 'function') return [];
 
   const workouts: any[] = await new Promise<any[]>((resolve, reject) => {
     AppleHealthKit.getSamples(
@@ -421,7 +421,7 @@ export async function syncActivityToHealth(activity: Activity): Promise<boolean>
   if (!hasPerm) return false;
 
   try {
-    if (Platform.OS === 'ios' && AppleHealthKit) {
+    if (Platform.OS === 'ios' && AppleHealthKit && typeof AppleHealthKit.saveWorkout === 'function') {
       await new Promise((resolve, reject) => {
         AppleHealthKit.saveWorkout(
           {
