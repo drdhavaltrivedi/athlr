@@ -80,16 +80,40 @@ export async function syncPendingActivities(): Promise<void> {
 }
 
 /**
- * Fetch the global community feed (recent public activities).
+ * Fetch the global community feed. 
+ * If social mode is active, it only fetches activities from people the user follows.
  */
 export async function getCommunityFeed(): Promise<any[]> {
   try {
-    const q = query(
-      collection(db, 'activities'),
-      where('visibility', 'in', ['everyone', 'followers']),
-      orderBy('startedAt', 'desc'),
-      limit(20)
-    );
+    const { getFollowingIds } = await import('./socialService');
+    const followingIds = await getFollowingIds();
+    
+    // Firestore 'in' query supports up to 10 items.
+    // If you follow more than 10 people, you'd need multiple queries or a fan-out architecture.
+    // For this prototype, we'll limit to 10 followed users.
+    const uidsToQuery = followingIds.slice(0, 10);
+    
+    // If not following anyone, we can either return empty or show public global activities.
+    // Let's show public global activities if they aren't following anyone yet.
+    let q;
+    
+    if (uidsToQuery.length > 0) {
+      q = query(
+        collection(db, 'activities'),
+        where('uid', 'in', uidsToQuery),
+        where('visibility', 'in', ['everyone', 'followers']),
+        orderBy('startedAt', 'desc'),
+        limit(20)
+      );
+    } else {
+      q = query(
+        collection(db, 'activities'),
+        where('visibility', '==', 'everyone'),
+        orderBy('startedAt', 'desc'),
+        limit(20)
+      );
+    }
+
     
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
