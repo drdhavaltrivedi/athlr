@@ -68,9 +68,9 @@ service cloud.firestore {
     // ── Challenges / clubs ───────────────────────────────────────────────
     match /challenges/{challengeId} {
       allow read: if signedIn();
-      // Participant-count bumps from the app are merge-writes by signed-in
-      // users; full management is admin-only.
-      allow create, update: if signedIn();
+      // Only admins may create or update challenge metadata.
+      // Participant sub-collection writes are handled separately below.
+      allow create, update: if isAdmin();
       allow delete: if isAdmin();
 
       match /participants/{uid} {

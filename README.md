@@ -55,33 +55,48 @@ The fitness tracking market is dominated by **Strava**, **Garmin Connect**, and 
 
 ### Core Features (Shipped)
 
+**Recording**
 - 🗺️ **GPS Activity Recording** — Real-time tracking with route polyline on a live map
-- ⏸️ **Auto-Pause / Manual Pause** — Clock stops when you stop moving (configurable)
-- 📊 **Live Stats Panel** — Distance (km/mi), moving time, current pace (min/km or min/mi) updated every second
-- 🏃 **Sport Types** — Run, Ride, Walk, Hike, Swim, Yoga, HIIT, Strength, Tennis, and more.
+- ⏸️ **Smart Auto-Pause** — `pausedBy: 'user' | 'auto' | null` field; auto-resumes on movement ≥ 1.2 m/s or 12 m displacement; distinct haptics for auto vs manual pause
+- 📊 **Live Stats Panel** — Distance (km/mi), moving time, current pace updated every second; elapsed vs moving time tracked separately
+- 🏃 **Sport Types** — Run, Ride, Walk, Hike, Swim, Yoga, HIIT, Strength, Tennis, and more; indoor sports (yoga/workout/hiit) skip GPS entirely
 - 📐 **Per-Kilometer/Mile Splits** — Automatically computed with pace bar visualisation
-- 📍 **Background Tracking** — GPS keeps recording when screen locks
-- 🗃️ **Offline SQLite Storage** — All activities stored on-device; nothing sent anywhere
-- 📤 **GPX Export** — Share standard GPX files to any app
-- 📸 **Share as Image** — Generate a beautiful, Instagram-ready map and stats card to share.
-- ☁️ **Cloud Backup & Sync** — Securely sync your offline activities to Firebase Firestore so you never lose them.
-- 🤝 **Social Feed** — Follow your friends and view their public activities in a customized community feed.
-- 🔒 **Private by Default** — Visibility is `private` unless you explicitly change it
-- 📈 **Lifetime & Training Stats** — Total activities, distance, moving time, elevation gain, calendar heatmaps, and weekly/monthly breakdowns.
-- ✏️ **Edit Activities** — Title editing and visibility toggles per activity.
-- 🧹 **Clean Delete** — Remove any activity with its full GPS trace
+- 📍 **Background Tracking** — GPS keeps recording when screen locks; switches to low-power profile on manual pause
+- 🎯 **GPS Signal Pill** — Live accuracy indicator (green/amber/red) before recording starts; map waits for a real fix before rendering
+- ⏳ **Cancellable Countdown** — 3-2-1 overlay with haptic beats; tap anywhere to cancel
 
-- 🍎 **Apple Health / Google Fit** — Automatic background syncing
-- 🗺️ **Offline Maps** — Custom OSM tile downloading for off-the-grid tracking
-- 🏆 **Advanced Segments** — Slicing activities to create Strava-style leaderboards
-- 📈 **Detailed Charts** — Interactive Pace and Elevation curves
-- 👤 **Public Profiles** — View friends' lifetime stats and recent activities
-- 🏅 **Clubs & Challenges** — Join monthly goals and compete on leaderboards
+**Data**
+- 🗃️ **Offline SQLite Storage** — All activities stored on-device (WAL mode); nothing sent anywhere without consent
+- 📤 **GPX Export** — Share standard GPX files to any app
+- 📸 **Share as Image** — Generate an Instagram-ready map+stats card
+- 📈 **Lifetime & Training Stats** — Total activities, distance, moving time, elevation gain, calendar heatmaps, weekly/monthly breakdowns
+
+**Social & Cloud**
+- ☁️ **Cloud Backup & Sync** — Firebase Firestore sync; `kudosCount` never overwritten by sync; long-polling transport fixes RN WebChannel hang
+- 🤝 **Community Feed** — Merges public activities + followers-only posts; infinite scroll with `startAfter` cursor pagination; pulsing skeleton on load
+- ❤️ **Kudos** — Real toggle (add + remove) with `increment(±1)` denormalized count; optimistic UI with auto-revert on error; hidden for private activities
+- 🔒 **Private by Default** — Visibility is `private` unless explicitly changed
+- 👤 **User Profiles** — View friends' lifetime stats and recent activities
+- 🏅 **Clubs & Challenges** — Join monthly goals, compete on leaderboards with progress bars
+- ✅ **Email Verification Banner** — Shown on profile for unverified accounts; Resend + "I've verified" buttons
+
+**Admin**
+- 🛡️ **Admin Panel** (`/admin`) — Web dashboard at the marketing site; manage users, challenges, activities; gated to `admin@brilworks.com` or Firestore `admins/{uid}` allowlist
+
+**UX & Accessibility**
+- 📳 **Haptics** — `tapLight/Medium/Heavy`, `notifySuccess/Warning`, `tapSelection`; countdown beats, auto-pause feel, activity saved buzz, kudo tap
+- ♿ **Accessibility** — `accessibilityRole/Label/State` on Record FAB, sport chips, filter chips, kudo button, pause/resume/finish buttons
+- ✏️ **Edit Activities** — Title + visibility toggles
+- 🧹 **Clean Delete** — Remove any activity with its full GPS trace
 
 ### In Progress / Planned
 
 - Apple Watch / WearOS companion apps
 - Training Load analysis
+- Pace chart on Activity Detail
+- Image caching for feed map thumbnails and avatars
+- Unit tests for `geo.ts`, `GpsFilter`, `format.ts`
+- Sentry crash reporting + React error boundaries
 
 ---
 
@@ -137,20 +152,24 @@ The fitness tracking market is dominated by **Strava**, **Garmin Connect**, and 
 ### Screen-by-Screen Breakdown
 
 #### 1. Activities Feed (`/`)
-- Loads all activities from SQLite on focus (no stale cache issues)
-- Each card shows: sport icon, title, date/time, distance, moving time, pace
-- Empty state guides new users to the Record tab
-- Tap any card → Activity Detail
+- **Me tab**: loads from SQLite (30/page, OFFSET pagination), refreshes on focus
+- **Community tab**: merges two parallel Firestore queries (public + followed), dedupes by Map, 20/page with `startAfter` cursor
+- Each card shows: sport icon, athlete name, title, date/time, distance, moving time, pace, kudo button
+- Pulsing skeleton shown during initial load; empty state guides to Record
+- Sport filter chips narrow both tabs; tap to filter / tap again to clear
+- Tap card → Activity Detail; tap athlete name → User Profile
 
 #### 2. Record (`/record`)
-- On mount: requests location permission; centers map on current position
-- Sport picker (horizontal scroll) — affects GPS filter speed limits
+- On mount: checks location permission; shows "Finding your location…" until a real GPS fix arrives (no placeholder map center)
+- **Indoor sports** (yoga, workout, hiit): no GPS/map; Duration is hero stat; START is instant
+- GPS signal pill (bottom-right) shows live accuracy before and during countdown
+- 3-2-1 countdown with haptic beats; tap anywhere to cancel
 - **START** → starts background GPS task + in-memory recording state
-- Live map follows athlete with animated camera
-- Stats update every 1 second via `setInterval`
-- Auto-pause: if GPS speed < 0.5 m/s for 8 seconds → `state: 'paused'`
-- **PAUSE** / **RESUME** → preserves points, freezes moving-time clock
-- **STOP** → confirmation dialog → Save (navigates to detail) or Discard
+- Live map follows athlete with animated camera; region only set after first real fix
+- `elapsedS` = wall clock since start; `movingS` only increments while recording (not paused)
+- Auto-pause: speed < 1.2 m/s → `pausedBy: 'auto'`; resumes automatically on movement ≥ 1.2 m/s or 12 m displacement
+- **PAUSE** / **RESUME** → GPS switches to low-power / high-accuracy profile; haptic feedback
+- **STOP** → confirmation dialog → Save (`notifySuccess` haptic, navigate to detail) or Discard
 
 #### 3. Activity Detail (`/activity/[id]`)
 - Loads full activity (including GPS point array) from SQLite
@@ -635,7 +654,33 @@ On Android 10+, the user must manually go to Settings → App Info → Location 
 
 ### Environment Variables
 
-No `.env` file required for core features. When cloud features are added, a `FIREBASE_CONFIG` will be needed (documented separately).
+Create a `.env` file in the repo root (already gitignored — **never commit this**):
+
+```bash
+EXPO_PUBLIC_FIREBASE_API_KEY=your_web_api_key
+EXPO_PUBLIC_STATIC_MAP_KEY=your_geoapify_key   # optional — only for map thumbnails
+```
+
+For the **website** (`/website`), add the same key with the `NEXT_PUBLIC_` prefix in Vercel project settings:
+
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=your_web_api_key
+```
+
+> **Why long-polling?** Firebase JS SDK uses WebChannel (HTTP streaming) by default. React Native's networking stack silently drops these connections. `src/services/firebase.ts` uses `initializeFirestore(app, { experimentalForceLongPolling: true })` — **never revert this to `getFirestore(app)`** or all Firestore reads/writes will hang indefinitely in the app.
+
+### Firestore Security Rules
+
+Rules live in `firestore.rules`. Deploy with:
+
+```bash
+firebase deploy --only firestore --project athlr-b
+```
+
+Key constraints enforced by the rules:
+- Non-owners may only update `kudosCount` on another user's activity (kudo toggle)
+- Challenge metadata (`/challenges/{id}`) is admin-write only; participants sub-collection is user-write
+- `admins/{uid}` docs are writable only by existing admins; readable only by the admin themselves
 
 ### TypeScript Checks
 
