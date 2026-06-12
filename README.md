@@ -738,8 +738,8 @@ Fill in the `submit.production` block in `eas.json` with your Apple Team ID and 
 
 | Platform | Bundle / Package ID |
 |---|---|
-| iOS | `com.brilwors.athlr` |
-| Android | `com.brilwors.athlr` |
+| iOS | `com.brilworks.athlr` |
+| Android | `com.brilworks.athlr` |
 
 ---
 

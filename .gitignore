@@ -16,3 +16,4 @@ ios/
 # local env (API keys)
 .env
 .env.local
+.expo/

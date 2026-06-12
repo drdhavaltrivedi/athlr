@@ -7,11 +7,10 @@
     "orientation": "portrait",
     "scheme": "athlr",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.brilworks.athlr",
-      "buildNumber": "1",
+      "buildNumber": "4",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Athlr uses your location to track your runs, rides and walks.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Athlr tracks your activity in the background so your route keeps recording when the screen is off.",
@@ -92,9 +91,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "bb31629c-a5b8-41a6-8041-e7daf997ae88"
+        "projectId": "f63cd151-3a9a-4fb5-8f6f-e9b5bea76395"
       }
     },
-    "owner": "dinesh.kachhot"
+    "owner": "dhaval29"
   }
 }
