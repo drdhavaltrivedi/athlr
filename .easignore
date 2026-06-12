@@ -1,2 +1,10 @@
 node_modules
 .env
+.env.local
+ios/Pods
+ios/build
+android/build
+android/.gradle
+android/app/build
+**/*.log
+.DS_Store
