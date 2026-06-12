@@ -7,11 +7,19 @@ export const metadata: Metadata = {
   title: 'Athlr — Track every mile. Own every stat.',
   description:
     'Athlr is the privacy-first fitness tracker. GPS recording, health sync, and a community feed — your data stays on your device until you choose to share it. Free forever.',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/icon.png', sizes: '1024x1024', type: 'image/png' },
+    ],
+    apple: '/icon.png',
+  },
   openGraph: {
     title: 'Athlr — Track every mile. Own every stat.',
     description:
       'The privacy-first fitness tracker. GPS recording, health sync, community feed. Free forever.',
     type: 'website',
+    images: [{ url: '/icon.png', width: 1024, height: 1024 }],
   },
 };
 
