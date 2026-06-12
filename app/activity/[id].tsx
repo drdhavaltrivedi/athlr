@@ -136,7 +136,11 @@ export default function ActivityDetailScreen() {
     try {
       setIsCapturing(true);
       if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
-      const uri = await captureRef(ref, { format, quality: 0.95 });
+      const uri = await captureRef(ref, {
+        format,
+        quality: 0.95,
+        ...(format === 'png' ? { result: 'tmpfile' } : {}),
+      });
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
         await Sharing.shareAsync(uri, { dialogTitle: 'Share your activity' });

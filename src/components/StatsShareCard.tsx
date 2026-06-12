@@ -59,7 +59,7 @@ export default React.forwardRef<View, Props>(function StatsShareCard(
               <SvgPolyline
                 points={routeStr}
                 fill="none"
-                stroke={sportColor + '28'}
+                stroke="rgba(0,0,0,0.25)"
                 strokeWidth={14}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   card: {
     width: W,
     height: H,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     paddingHorizontal: 80,
     paddingVertical: 70,
     justifyContent: 'space-between',
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     fontSize: 52,
     fontWeight: '900',
     fontStyle: 'italic',
-    color: '#0B1220',
+    color: '#FFFFFF',
     letterSpacing: -2,
   },
 
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 54,
     fontWeight: '800',
-    color: '#0B1220',
+    color: '#FFFFFF',
     letterSpacing: -1,
   },
 
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 26,
     fontWeight: '600',
-    color: '#8A97AD',
+    color: 'rgba(255,255,255,0.65)',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 8,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 28,
-    color: '#8A97AD',
+    color: 'rgba(255,255,255,0.65)',
     fontWeight: '600',
   },
 });
