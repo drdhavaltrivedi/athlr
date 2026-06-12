@@ -19,6 +19,7 @@ import { deleteActivity, getActivity, updateTitle, updateVisibility } from '@/db
 import { Activity, ActivityVisibility, SegmentEffort } from '@/types';
 import { exportAndShareGpx } from '@/utils/gpx';
 import ShareCard from '@/components/ShareCard';
+import StatsShareCard from '@/components/StatsShareCard';
 import * as healthService from '@/services/healthService';
 import * as mapCache from '@/services/mapCacheService';
 import * as segmentService from '@/services/segmentService';
@@ -50,6 +51,7 @@ export default function ActivityDetailScreen() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [segmentEfforts, setSegmentEfforts] = useState<SegmentEffort[]>([]);
   const shareCardRef = React.useRef<View>(null);
+  const statsCardRef = React.useRef<View>(null);
 
   useEffect(() => {
     if (id) {
@@ -129,24 +131,15 @@ export default function ActivityDetailScreen() {
     });
   };
 
-  const onShareImage = async () => {
-    if (!shareCardRef.current || isCapturing) return;
+  const captureAndShare = async (ref: React.RefObject<View>, format: 'jpg' | 'png', delayMs = 0) => {
+    if (!ref.current || isCapturing) return;
     try {
       setIsCapturing(true);
-      
-      // Delay slightly to ensure map tiles in the offscreen component have time to load
-      await new Promise(r => setTimeout(r, 800));
-
-      const uri = await captureRef(shareCardRef, {
-        format: 'jpg',
-        quality: 0.9,
-      });
-
+      if (delayMs) await new Promise((r) => setTimeout(r, delayMs));
+      const uri = await captureRef(ref, { format, quality: 0.95 });
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
-        await Sharing.shareAsync(uri, {
-          dialogTitle: 'Share your activity',
-        });
+        await Sharing.shareAsync(uri, { dialogTitle: 'Share your activity' });
       } else {
         Alert.alert('Error', 'Sharing is not available on this device');
       }
@@ -156,6 +149,25 @@ export default function ActivityDetailScreen() {
     } finally {
       setIsCapturing(false);
     }
+  };
+
+  const onShareImage = () => {
+    if (isCapturing) return;
+    Alert.alert(
+      'Share Activity',
+      'Choose a style',
+      [
+        {
+          text: 'Map Card',
+          onPress: () => captureAndShare(shareCardRef, 'jpg', 800),
+        },
+        {
+          text: 'Stats Card',
+          onPress: () => captureAndShare(statsCardRef, 'png', 0),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
   };
 
   const onDelete = () => {
@@ -413,6 +425,7 @@ export default function ActivityDetailScreen() {
         </View>
       </ScrollView>
       <ShareCard ref={shareCardRef} activity={activity} units={units} />
+      <StatsShareCard ref={statsCardRef} activity={activity} units={units} />
     </>
   );
 }
