@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.brilwors.athlr",
+      "bundleIdentifier": "com.brilworks.athlr",
       "buildNumber": "1",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Athlr uses your location to track your runs, rides and walks.",
@@ -28,7 +28,7 @@
       }
     },
     "android": {
-      "package": "com.brilwors.athlr",
+      "package": "com.brilworks.athlr",
       "versionCode": 10,
       "googleServicesFile": "./google-services.json",
       "permissions": [
