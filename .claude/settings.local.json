@@ -18,7 +18,7 @@
       "Bash(npx tsc *)",
       "Bash(echo \"exit: $?\")",
       "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/admin/Downloads/athlr/app.json'\\)\\); print\\(json.dumps\\(d['expo'].get\\('plugins'\\), indent=1\\)\\); print\\(json.dumps\\(d['expo'].get\\('ios'\\), indent=1\\)\\)\")",
-      "Bash(curl -s -X POST \"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=***REMOVED***\" -H 'Content-Type: application/json' -d '{\"email\":\"admin@brilworks.com\",\"password\":\"Brilworks@2026\",\"returnSecureToken\":true}')",
+      "Bash(curl -s -X POST \"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyB3EE-iq2yfEUolfxB48zXBgWl_nMQYuVs\" -H 'Content-Type: application/json' -d '{\"email\":\"admin@brilworks.com\",\"password\":\"Brilworks@2026\",\"returnSecureToken\":true}')",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); err=d.get\\('error'\\); print\\('STILL DISABLED' if err and 'disabled' in str\\(err\\).lower\\(\\) else \\('ERROR: '+str\\(err\\) if err else 'OK: admins doc created'\\)\\)\")",
       "Bash(firebase projects:list)",
       "Bash(firebase login:list)",

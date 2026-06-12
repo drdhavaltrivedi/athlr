@@ -31,7 +31,7 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
       const coords = activity.points.filter((_, i) => i % step === 0).map(p => [p.latitude, p.longitude] as [number, number]);
       const enc = polyline.encode(coords);
       // Use the Firebase API Key as the Google Maps Key. (Note: Ensure Static Maps API is enabled in GCP)
-      const apiKey = '***REMOVED***'; 
+      const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY; 
       mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x400&path=weight:4%7Ccolor:0xfe5c36ff%7Cenc:${enc}&key=${apiKey}`;
     }
     

@@ -6,3 +6,8 @@ expo-env.d.ts
 # @end expo-cli
 node_modules
 node_modules
+
+google-services.json
+GoogleService-Info.plist
+website/.env
+

@@ -6,7 +6,7 @@ import { getFirestore } from 'firebase/firestore';
 // These values are public client identifiers — security is enforced by
 // Firebase Auth + Firestore security rules (admins/{uid} gate).
 const firebaseConfig = {
-  apiKey: '***REMOVED***',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: 'athlr-b.firebaseapp.com',
   projectId: 'athlr-b',
   storageBucket: 'athlr-b.firebasestorage.app',
