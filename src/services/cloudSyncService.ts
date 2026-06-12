@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, serverTimestamp, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, getDoc, serverTimestamp, query, where, getDocs, limit, orderBy, increment, startAfter } from 'firebase/firestore';
 import { db, auth } from '@/services/firebase';
 import { Activity } from '@/types';
 import polyline from '@mapbox/polyline';
@@ -35,14 +35,16 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
       mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x400&path=weight:4%7Ccolor:0xfe5c36ff%7Cenc:${enc}&key=${apiKey}`;
     }
     
-    // Create a lean version of the activity for the feed
+    // Create a lean version of the activity for the feed.
+    // NOTE: kudosCount is intentionally NOT set here — re-syncing must never
+    // reset accumulated kudos. toggleKudo() owns that field via increment().
+    const { kudosCount: _ignored, ...activityWithoutKudos } = activity;
     const cloudActivity = {
-      ...activity,
+      ...activityWithoutKudos,
       uid: user.uid,
       userName: user.displayName || 'Athlete',
       syncedAt: serverTimestamp(),
       mapUrl,
-      kudosCount: 0,
       points: [], // DONT UPLOAD 1000s of GPS POINTS to firestore to save read/write costs
     };
 
@@ -54,7 +56,7 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
     // Mark as synced locally
     await markActivitySynced(activity.id);
   } catch (error) {
-    console.error('Failed to sync activity:', error);
+    console.warn('Failed to sync activity:', error);
   }
 }
 
@@ -79,76 +81,103 @@ export async function syncPendingActivities(): Promise<void> {
     
     console.log('Background sync complete.');
   } catch (error) {
-    console.error('Error during background sync:', error);
+    console.warn('Error during background sync:', error);
   }
 }
 
+export const FEED_PAGE_SIZE = 20;
+
 /**
- * Fetch the global community feed. 
- * If social mode is active, it only fetches activities from people the user follows.
+ * Fetch the community feed: public activities from everyone, merged with
+ * followers-only activities from people you follow — so following one
+ * friend never empties the feed.
+ *
+ * Pass `beforeStartedAt` (the startedAt of the last item you have) to load
+ * the next page.
  */
-export async function getCommunityFeed(): Promise<any[]> {
+export async function getCommunityFeed(beforeStartedAt?: number): Promise<any[]> {
   try {
     const { getFollowingIds } = await import('./socialService');
     const followingIds = await getFollowingIds();
-    
-    // Firestore 'in' query supports up to 10 items.
-    // If you follow more than 10 people, you'd need multiple queries or a fan-out architecture.
-    // For this prototype, we'll limit to 10 followed users.
+    // Firestore 'in' supports max 10 values; beyond that needs fan-out.
     const uidsToQuery = followingIds.slice(0, 10);
-    
-    // If not following anyone, we can either return empty or show public global activities.
-    // Let's show public global activities if they aren't following anyone yet.
-    let q;
-    
-    if (uidsToQuery.length > 0) {
-      q = query(
-        collection(db, 'activities'),
-        where('uid', 'in', uidsToQuery),
-        where('visibility', 'in', ['everyone', 'followers']),
-        orderBy('startedAt', 'desc'),
-        limit(20)
-      );
-    } else {
-      q = query(
+
+    const cursor = beforeStartedAt != null ? [startAfter(beforeStartedAt)] : [];
+
+    const queries = [
+      query(
         collection(db, 'activities'),
         where('visibility', '==', 'everyone'),
         orderBy('startedAt', 'desc'),
-        limit(20)
+        ...cursor,
+        limit(FEED_PAGE_SIZE),
+      ),
+    ];
+    if (uidsToQuery.length > 0) {
+      queries.push(
+        query(
+          collection(db, 'activities'),
+          where('uid', 'in', uidsToQuery),
+          where('visibility', 'in', ['everyone', 'followers']),
+          orderBy('startedAt', 'desc'),
+          ...cursor,
+          limit(FEED_PAGE_SIZE),
+        ),
       );
     }
 
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const snapshots = await Promise.all(queries.map((q) => getDocs(q)));
+    const byId = new Map<string, any>();
+    for (const snap of snapshots) {
+      for (const d of snap.docs) byId.set(d.id, { id: d.id, ...d.data() });
+    }
+    const items = [...byId.values()]
+      .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))
+      .slice(0, FEED_PAGE_SIZE);
+
+    // Mark which activities the current user has already kudoed so the
+    // heart renders filled on first paint.
+    const user = auth.currentUser;
+    if (user && items.length > 0) {
+      await Promise.all(
+        items.map(async (a) => {
+          const k = await getDoc(doc(db, 'activities', a.id, 'kudos', user.uid)).catch(() => null);
+          a.givenByMe = k?.exists() ?? false;
+        }),
+      );
+    }
+    return items;
   } catch (error) {
-    console.error('Failed to fetch community feed:', error);
+    console.warn('Failed to fetch community feed:', error);
     return [];
   }
 }
 
+export type KudoResult = 'added' | 'removed' | 'error';
+
 /**
- * Toggle a kudo for an activity in Firestore
+ * Toggle a kudo for an activity. Maintains the denormalized kudosCount on
+ * the activity doc so feeds can show counts without reading the subcollection.
  */
-export async function toggleKudo(activityId: string): Promise<boolean> {
+export async function toggleKudo(activityId: string): Promise<KudoResult> {
   const user = auth.currentUser;
-  if (!user) return false;
+  if (!user) return 'error';
 
   try {
     const kudoRef = doc(db, 'activities', activityId, 'kudos', user.uid);
-    // For simplicity, we just toggle by checking if it exists. 
-    // In a production app, we would use a batched write to increment/decrement a counter on the activity doc.
-    const kudoDoc = await getDocs(query(collection(db, 'activities', activityId, 'kudos'), where('__name__', '==', user.uid)));
-    if (!kudoDoc.empty) {
-      // remove
-      // await deleteDoc(kudoRef); // Note: we'd need to import deleteDoc
-      return false; // stub
-    } else {
-      await setDoc(kudoRef, { uid: user.uid, timestamp: serverTimestamp() });
-      return true;
+    const activityRef = doc(db, 'activities', activityId);
+
+    const existing = await getDoc(kudoRef);
+    if (existing.exists()) {
+      await deleteDoc(kudoRef);
+      await setDoc(activityRef, { kudosCount: increment(-1) }, { merge: true });
+      return 'removed';
     }
+    await setDoc(kudoRef, { uid: user.uid, timestamp: serverTimestamp() });
+    await setDoc(activityRef, { kudosCount: increment(1) }, { merge: true });
+    return 'added';
   } catch (e) {
-    console.error(e);
-    return false;
+    console.warn('Kudo toggle failed:', e);
+    return 'error';
   }
 }

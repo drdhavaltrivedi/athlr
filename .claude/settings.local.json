@@ -17,7 +17,20 @@
       "Bash(git push *)",
       "Bash(npx tsc *)",
       "Bash(echo \"exit: $?\")",
-      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/admin/Downloads/athlr/app.json'\\)\\); print\\(json.dumps\\(d['expo'].get\\('plugins'\\), indent=1\\)\\); print\\(json.dumps\\(d['expo'].get\\('ios'\\), indent=1\\)\\)\")"
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/admin/Downloads/athlr/app.json'\\)\\); print\\(json.dumps\\(d['expo'].get\\('plugins'\\), indent=1\\)\\); print\\(json.dumps\\(d['expo'].get\\('ios'\\), indent=1\\)\\)\")",
+      "Bash(curl -s -X POST \"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=***REMOVED***\" -H 'Content-Type: application/json' -d '{\"email\":\"admin@brilworks.com\",\"password\":\"Brilworks@2026\",\"returnSecureToken\":true}')",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); err=d.get\\('error'\\); print\\('STILL DISABLED' if err and 'disabled' in str\\(err\\).lower\\(\\) else \\('ERROR: '+str\\(err\\) if err else 'OK: admins doc created'\\)\\)\")",
+      "Bash(firebase projects:list)",
+      "Bash(firebase login:list)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('RULES STILL BLOCKING' if 'error' in d else 'RULES PUBLISHED — reads work'\\)\")",
+      "Bash(firebase firestore:databases:list --project athlr-b)",
+      "Bash(firebase apps:list --project athlr-b)",
+      "Bash(firebase deploy *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('   OK — challenge seeded' if 'name' in d else '   FAILED: '+d.get\\('error',{}\\).get\\('message','?'\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('OK — summer-elevation seeded' if 'name' in d else 'FAILED: '+str\\(d.get\\('error'\\)\\)\\)\")",
+      "Bash(git commit *)",
+      "Bash(echo \"grep-exit: $?\")",
+      "Bash(echo \"changed-files-exit: $?\")"
     ]
   }
 }

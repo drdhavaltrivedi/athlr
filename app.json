@@ -15,7 +15,9 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Athlr uses your location to track your runs, rides and walks.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Athlr tracks your activity in the background so your route keeps recording when the screen is off.",
-        "UIBackgroundModes": ["location"],
+        "UIBackgroundModes": [
+          "location"
+        ],
         "NSHealthShareUsageDescription": "Athlr reads your workouts, heart rate, and routes from Apple Health so you can see all your activity in one place — including data from Apple Watch, Garmin, and other apps.",
         "NSHealthUpdateUsageDescription": "Athlr can write completed activities to Apple Health so your workouts appear in your health record."
       },
@@ -27,7 +29,7 @@
     },
     "android": {
       "package": "com.brilwors.athlr",
-      "versionCode": 1,
+      "versionCode": 3,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -45,7 +47,12 @@
         "android.permission.health.WRITE_EXERCISE",
         "android.permission.health.WRITE_HEART_RATE",
         "android.permission.health.WRITE_DISTANCE",
-        "android.permission.health.WRITE_STEPS"
+        "android.permission.health.WRITE_STEPS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
@@ -69,6 +76,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "bb31629c-a5b8-41a6-8041-e7daf997ae88"
+      }
+    },
+    "owner": "dinesh.kachhot"
   }
 }

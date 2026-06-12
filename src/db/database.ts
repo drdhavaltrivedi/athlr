@@ -169,20 +169,21 @@ export async function markActivitySynced(id: string): Promise<void> {
 export async function listActivities(
   limit = 100,
   sport?: string,
+  offset = 0,
 ): Promise<ActivitySummary[]> {
   const db = await getDb();
   const rows = sport && sport !== 'all'
     ? await db.getAllAsync<Record<string, unknown>>(
         `SELECT id, sport, title, started_at, ended_at, elapsed_s, moving_s,
                 distance_m, elevation_gain_m, avg_pace_s_per_km, visibility
-         FROM activities WHERE sport = ? ORDER BY started_at DESC LIMIT ?`,
-        sport, limit,
+         FROM activities WHERE sport = ? ORDER BY started_at DESC LIMIT ? OFFSET ?`,
+        sport, limit, offset,
       )
     : await db.getAllAsync<Record<string, unknown>>(
         `SELECT id, sport, title, started_at, ended_at, elapsed_s, moving_s,
                 distance_m, elevation_gain_m, avg_pace_s_per_km, visibility
-         FROM activities ORDER BY started_at DESC LIMIT ?`,
-        limit,
+         FROM activities ORDER BY started_at DESC LIMIT ? OFFSET ?`,
+        limit, offset,
       );
   return rows.map(rowToSummary);
 }

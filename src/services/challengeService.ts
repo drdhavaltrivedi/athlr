@@ -92,7 +92,7 @@ export async function getActiveChallenges(): Promise<Challenge[]> {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Challenge);
   } catch (err) {
-    console.error('Failed to get challenges:', err);
+    console.warn('Failed to get challenges:', err);
     return [];
   }
 }
@@ -102,7 +102,7 @@ export async function getChallenge(id: string): Promise<Challenge | null> {
     const docSnap = await getDoc(doc(db, 'challenges', id));
     return docSnap.exists() ? (docSnap.data() as Challenge) : null;
   } catch (err) {
-    console.error('Failed to get challenge:', err);
+    console.warn('Failed to get challenge:', err);
     return null;
   }
 }
@@ -116,7 +116,7 @@ export async function getChallengeLeaderboard(challengeId: string): Promise<Chal
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as ChallengeParticipant);
   } catch (err) {
-    console.error('Failed to get leaderboard:', err);
+    console.warn('Failed to get leaderboard:', err);
     return [];
   }
 }
@@ -172,7 +172,7 @@ export async function joinChallenge(challenge: Challenge): Promise<boolean> {
 
     return true;
   } catch (err) {
-    console.error('Failed to join challenge:', err);
+    console.warn('Failed to join challenge:', err);
     return false;
   }
 }
@@ -213,6 +213,6 @@ export async function updateChallengeProgressForActivity(activity: Activity): Pr
       }
     }
   } catch (err) {
-    console.error('Failed to auto-update challenge progress:', err);
+    console.warn('Failed to auto-update challenge progress:', err);
   }
 }

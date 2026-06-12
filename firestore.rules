@@ -46,8 +46,16 @@ service cloud.firestore {
     // ── Shared activities (community feed) ──────────────────────────────
     match /activities/{activityId} {
       allow read: if signedIn();
-      allow create, update: if signedIn()
+      allow create: if signedIn()
         && (request.resource.data.uid == request.auth.uid || isAdmin());
+      // Owners/admins can update anything; anyone signed in may update
+      // ONLY the denormalized kudosCount (kudo toggles on others' posts).
+      allow update: if signedIn()
+        && (
+          request.resource.data.uid == request.auth.uid
+          || isAdmin()
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kudosCount'])
+        );
       allow delete: if signedIn()
         && (resource.data.uid == request.auth.uid || isAdmin());
 

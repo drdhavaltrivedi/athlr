@@ -8,11 +8,14 @@ import {
   rollingPaceSPerKm,
 } from '@/utils/geo';
 import { saveActivity } from '@/db/database';
+import { notifyWarning, tapMedium } from '@/utils/haptics';
 
 interface RecordingState extends RecordingSnapshot {
   autoPause: boolean;
   units: Units;
   displayName: string;
+  /** Who paused: auto-pause keeps listening to GPS and resumes by itself. */
+  pausedBy: 'user' | 'auto' | null;
   /** internal: last tick timestamp for the elapsed clock */
   _lastTickMs: number | null;
   _filter: GpsFilter;
@@ -33,7 +36,7 @@ interface RecordingState extends RecordingSnapshot {
   discard: () => void;
 }
 
-const initial: RecordingSnapshot & { autoPause: boolean; units: Units; displayName: string } = {
+const initial: RecordingSnapshot & { autoPause: boolean; units: Units; displayName: string; pausedBy: 'user' | 'auto' | null } = {
   state: 'idle',
   sport: 'run',
   startedAt: null,
@@ -46,6 +49,7 @@ const initial: RecordingSnapshot & { autoPause: boolean; units: Units; displayNa
   autoPause: true,
   units: 'km',
   displayName: '',
+  pausedBy: null,
 };
 
 export const useRecordingStore = create<RecordingState>((set, get) => ({
@@ -76,25 +80,44 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
     });
   },
 
-  pause: () => set({ state: 'paused', _lastTickMs: null }),
+  pause: () => set({ state: 'paused', pausedBy: 'user' }),
 
-  resume: () => set({ state: 'recording', _lastTickMs: Date.now() }),
+  resume: () => set({ state: 'recording', pausedBy: null, _lastTickMs: Date.now() }),
 
   tick: () => {
     const s = get();
-    // BUG FIX: only increment movingS when actually recording, not paused
-    if (s.state !== 'recording') return;
+    if (s.state === 'idle' || s.startedAt == null) return;
     const now = Date.now();
     const dt = s._lastTickMs ? (now - s._lastTickMs) / 1000 : 1;
     set({
-      elapsedS: s.elapsedS + dt,
-      movingS: s.movingS + dt,
+      // Elapsed is wall-clock from start — it keeps counting through pauses
+      elapsedS: (now - s.startedAt) / 1000,
+      // Moving time accumulates only while actually recording
+      movingS: s.state === 'recording' ? s.movingS + dt : s.movingS,
       _lastTickMs: now,
     });
   },
 
   ingest: (raw) => {
-    const s = get();
+    let s = get();
+
+    // Auto-resume: while auto-paused we keep listening to raw fixes and
+    // restart the clock as soon as the athlete is clearly moving again.
+    // (User-initiated pauses are sacred — only the user resumes those.)
+    if (s.state === 'paused' && s.pausedBy === 'auto') {
+      const last = s.points[s.points.length - 1];
+      const goodFix = (raw.accuracy ?? 99) < 30;
+      const movedM = last
+        ? haversineM(last.latitude, last.longitude, raw.latitude, raw.longitude)
+        : 0;
+      const isMoving =
+        (raw.speed != null && raw.speed > 1.2) || (goodFix && movedM > 12);
+      if (!isMoving) return;
+      set({ state: 'recording', pausedBy: null, _lastTickMs: Date.now() });
+      tapMedium(); // let the athlete feel the auto-resume
+      s = get();
+    }
+
     if (s.state !== 'recording') return;
 
     const point = s._filter.process(raw);
@@ -115,7 +138,8 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
     });
 
     if (s.autoPause && isStationary(points)) {
-      set({ state: 'paused', _lastTickMs: null });
+      set({ state: 'paused', pausedBy: 'auto' });
+      notifyWarning(); // …and the auto-pause
     }
   },
 

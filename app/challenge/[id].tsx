@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Challenge, ChallengeParticipant } from '@/types';
 import { getChallenge, getChallengeLeaderboard, joinChallenge, getMyParticipantInfo, fallbackChallenges } from '@/services/challengeService';
 import { withTimeout } from '@/utils/async';
+import { auth } from '@/services/firebase';
 import { colors, radii, spacing, type } from '@/theme';
 
 export default function ChallengeDetailScreen() {
@@ -48,13 +49,31 @@ export default function ChallengeDetailScreen() {
 
   const handleJoin = async () => {
     if (!challenge) return;
+    if (!auth.currentUser) {
+      Alert.alert(
+        'Log in to join',
+        'Join challenges, climb the leaderboard and track your progress with an Athlr account.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Log In', onPress: () => router.push('/auth') },
+        ],
+      );
+      return;
+    }
     setJoining(true);
     const success = await joinChallenge(challenge);
     if (success) {
       Alert.alert('Joined!', 'You are now participating in this challenge. Your past qualifying activities have been counted.');
       await loadData();
     } else {
-      Alert.alert('Error', 'Could not join challenge or you are not logged in.');
+      Alert.alert(
+        'Could not join',
+        'Something went wrong while joining the challenge. Check your connection and try again.',
+        [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Try again', onPress: handleJoin },
+        ],
+      );
     }
     setJoining(false);
   };

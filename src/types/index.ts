@@ -69,6 +69,8 @@ export interface Activity {
   uid?: string;
   mapUrl?: string;
   kudosCount?: number;
+  /** Whether the current user has kudoed this activity (attached by the feed). */
+  givenByMe?: boolean;
 }
 
 /** Lightweight row used for lists (points not loaded). */

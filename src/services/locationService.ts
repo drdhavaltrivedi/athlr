@@ -45,27 +45,60 @@ export async function requestPermissions() {
   return { foreground: true, background: bg.status === 'granted', canAskAgainForeground: fg.canAskAgain };
 }
 
+const FOREGROUND_SERVICE = {
+  notificationTitle: 'Athlr is recording',
+  notificationBody: 'Your activity is being tracked.',
+  notificationColor: '#FFB020',
+};
+
+/** Full-accuracy profile used while actively recording. */
+const ACTIVE_OPTIONS: Location.LocationTaskOptions = {
+  accuracy: Location.Accuracy.BestForNavigation,
+  timeInterval: 1000,
+  distanceInterval: 2,
+  showsBackgroundLocationIndicator: true,
+  // Android foreground service notification — required for reliable
+  // background tracking and honest with the user about what's running.
+  foregroundService: FOREGROUND_SERVICE,
+  pausesUpdatesAutomatically: false,
+  activityType: Location.ActivityType.Fitness,
+};
+
+/**
+ * Low-power profile for user-initiated pauses (coffee stop, traffic light
+ * chat). Auto-pause does NOT use this — it needs fresh fixes to auto-resume.
+ */
+const PAUSED_OPTIONS: Location.LocationTaskOptions = {
+  ...ACTIVE_OPTIONS,
+  accuracy: Location.Accuracy.Balanced,
+  timeInterval: 5000,
+  distanceInterval: 20,
+};
+
 export async function startTracking(): Promise<void> {
   const already = await Location.hasStartedLocationUpdatesAsync(TASK_NAME).catch(
     () => false,
   );
   if (already) return;
 
-  await Location.startLocationUpdatesAsync(TASK_NAME, {
-    accuracy: Location.Accuracy.BestForNavigation,
-    timeInterval: 1000,
-    distanceInterval: 2,
-    showsBackgroundLocationIndicator: true,
-    // Android foreground service notification — required for reliable
-    // background tracking and honest with the user about what's running.
-    foregroundService: {
-      notificationTitle: 'Athlr is recording',
-      notificationBody: 'Your activity is being tracked.',
-      notificationColor: '#FFB020',
-    },
-    pausesUpdatesAutomatically: false,
-    activityType: Location.ActivityType.Fitness,
-  });
+  await Location.startLocationUpdatesAsync(TASK_NAME, ACTIVE_OPTIONS);
+}
+
+/**
+ * Switch between the full-accuracy and low-power tracking profiles
+ * without losing the background task. Call with true on manual pause,
+ * false on resume.
+ */
+export async function setPausedProfile(paused: boolean): Promise<void> {
+  const started = await Location.hasStartedLocationUpdatesAsync(TASK_NAME).catch(
+    () => false,
+  );
+  if (!started) return;
+  await Location.stopLocationUpdatesAsync(TASK_NAME);
+  await Location.startLocationUpdatesAsync(
+    TASK_NAME,
+    paused ? PAUSED_OPTIONS : ACTIVE_OPTIONS,
+  );
 }
 
 export async function stopTracking(): Promise<void> {
@@ -73,6 +106,26 @@ export async function stopTracking(): Promise<void> {
     () => false,
   );
   if (started) await Location.stopLocationUpdatesAsync(TASK_NAME);
+}
+
+/**
+ * Foreground accuracy watcher for the pre-start GPS indicator.
+ * Only watches if permission is already granted (never prompts).
+ * Returns null when unavailable; caller shows "GPS off" state.
+ */
+export async function watchAccuracy(
+  cb: (accuracyM: number | null) => void,
+): Promise<{ remove: () => void } | null> {
+  try {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status !== 'granted') return null;
+    return await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 2000, distanceInterval: 0 },
+      (loc) => cb(loc.coords.accuracy ?? null),
+    );
+  } catch {
+    return null;
+  }
 }
 
 /** One-shot fix to center the map before recording starts. */

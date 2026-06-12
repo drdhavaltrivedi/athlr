@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { auth } from '@/services/firebase';
 import { ActivitySummary } from '@/types';
 import { colors, radii, spacing, type } from '@/theme';
 import { formatDate, formatTime, formatDistance, formatDuration, formatPace, distanceUnit, paceUnit, SPORT_ICON, SPORT_COLOR } from '@/utils/format';
@@ -17,19 +19,42 @@ export function ActivityCard({
   onPress: () => void;
   onUserPress?: (uid: string) => void;
 }) {
+  const router = useRouter();
   const sportColor = SPORT_COLOR[item.sport] ?? colors.accent;
   const [kudos, setKudos] = useState(item.kudosCount || 0);
-  const [given, setGiven] = useState(false);
+  const [given, setGiven] = useState(!!item.givenByMe);
+
+  // FlatList recycles cards — re-seed state when the underlying item changes
+  React.useEffect(() => {
+    setKudos(item.kudosCount || 0);
+    setGiven(!!item.givenByMe);
+  }, [item.id, item.kudosCount, item.givenByMe]);
+
+  // Private activities exist only in local SQLite — there is no cloud doc
+  // to kudo, so the kudo UI is hidden for them entirely.
+  const canKudo = item.visibility !== 'private';
 
   const handleKudo = async (e: any) => {
     e.stopPropagation();
+    if (!auth.currentUser) {
+      Alert.alert(
+        'Log in to give kudos',
+        'Cheer on other athletes with an Athlr account.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Log In', onPress: () => router.push('/auth') },
+        ],
+      );
+      return;
+    }
+    // Optimistic toggle; revert only if the write actually failed
     const newGiven = !given;
     setGiven(newGiven);
-    setKudos((k: number) => newGiven ? k + 1 : k - 1);
-    const success = await toggleKudo(item.id);
-    if (!success) {
+    setKudos((k: number) => (newGiven ? k + 1 : Math.max(0, k - 1)));
+    const result = await toggleKudo(item.id);
+    if (result === 'error') {
       setGiven(!newGiven);
-      setKudos((k: number) => !newGiven ? k + 1 : k - 1);
+      setKudos((k: number) => (!newGiven ? k + 1 : Math.max(0, k - 1)));
     }
   };
 
@@ -73,19 +98,21 @@ export function ActivityCard({
         <StatCell label="Elev · m" value={String(Math.round(item.elevationGainM))} />
       </View>
 
-      {/* Kudos Footer */}
-      <View style={styles.cardFooter}>
-        <Pressable style={styles.kudoBtn} onPress={handleKudo}>
-          <Ionicons 
-            name={given ? "heart" : "heart-outline"} 
-            size={20} 
-            color={given ? colors.accent : colors.textDim} 
-          />
-          <Text style={[styles.kudoText, given && { color: colors.accent }]}>
-            {kudos} {kudos === 1 ? 'Kudo' : 'Kudos'}
-          </Text>
-        </Pressable>
-      </View>
+      {/* Kudos Footer — only for activities that exist in the cloud */}
+      {canKudo && (
+        <View style={styles.cardFooter}>
+          <Pressable style={styles.kudoBtn} onPress={handleKudo}>
+            <Ionicons
+              name={given ? "heart" : "heart-outline"}
+              size={20}
+              color={given ? colors.accent : colors.textDim}
+            />
+            <Text style={[styles.kudoText, given && { color: colors.accent }]}>
+              {kudos} {kudos === 1 ? 'Kudo' : 'Kudos'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </Pressable>
   );
 }
