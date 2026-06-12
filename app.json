@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.brilworks.athlr",
-      "buildNumber": "4",
+      "buildNumber": "10",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Athlr uses your location to track your runs, rides and walks.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Athlr tracks your activity in the background so your route keeps recording when the screen is off.",
@@ -18,7 +18,8 @@
           "location"
         ],
         "NSHealthShareUsageDescription": "Athlr reads your workouts, heart rate, and routes from Apple Health so you can see all your activity in one place — including data from Apple Watch, Garmin, and other apps.",
-        "NSHealthUpdateUsageDescription": "Athlr can write completed activities to Apple Health so your workouts appear in your health record."
+        "NSHealthUpdateUsageDescription": "Athlr can write completed activities to Apple Health so your workouts appear in your health record.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -28,7 +29,7 @@
     },
     "android": {
       "package": "com.brilworks.athlr",
-      "versionCode": 12,
+      "versionCode": 18,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -76,12 +77,13 @@
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "1.9.25",
+            "kotlinVersion": "2.1.20",
             "minSdkVersion": 26
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withModularHeaders"
     ],
     "experiments": {
       "typedRoutes": true

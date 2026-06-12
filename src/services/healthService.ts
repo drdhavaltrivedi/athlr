@@ -210,7 +210,8 @@ async function importFromHealthKit(since: Date): Promise<ImportedWorkout[]> {
       timestamp: new Date(r.timestamp).getTime(),
     }));
 
-    const sport = hkSport(w.activityType ?? 0);
+    // getSamples returns activityId (numeric type) and distance in miles
+    const sport = hkSport(w.activityId ?? 0);
 
     imported.push({
       sourceId: w.id ?? `hk_${w.start}`,
@@ -222,7 +223,7 @@ async function importFromHealthKit(since: Date): Promise<ImportedWorkout[]> {
       startedAt: new Date(w.start).getTime(),
       endedAt: new Date(w.end).getTime(),
       durationS: Math.round((new Date(w.end).getTime() - new Date(w.start).getTime()) / 1000),
-      distanceM: Math.round((w.distance ?? 0) * 1000),  // HK returns km
+      distanceM: Math.round((w.distance ?? 0) * 1609.344), // HK returns miles → convert to meters
       elevationGainM: Math.round(w.elevationAscended ?? 0),
       avgHeartRate: avgHR,
       calories: w.calories ? Math.round(w.calories) : null,
@@ -386,8 +387,11 @@ let _status: HealthServiceStatus = {
 
 export async function initialize(): Promise<HealthServiceStatus> {
   if (Platform.OS === 'ios') {
-    const ok = await initializeHK();
-    _status = { available: !!AppleHealthKit, platform: 'ios', authorized: ok, reason: _lastError ?? undefined };
+    // Don't call initHealthKit here — that auto-triggers the iOS permission dialog
+    // before the user taps "Connect". Just report module availability.
+    // The permission dialog is shown only when requestPermissions() is called explicitly.
+    const available = !!AppleHealthKit && typeof AppleHealthKit.initHealthKit === 'function';
+    _status = { available, platform: 'ios', authorized: hkInitialized, reason: available ? undefined : 'Apple Health module not loaded' };
   } else if (Platform.OS === 'android') {
     const ok = await initializeHC();
     _status = { available: !!HC, platform: 'android', authorized: ok, reason: _lastError ?? undefined };
@@ -397,7 +401,9 @@ export async function initialize(): Promise<HealthServiceStatus> {
 
 export async function requestPermissions(): Promise<boolean> {
   if (Platform.OS === 'ios') {
-    return initializeHK();
+    const ok = await initializeHK();
+    _status = { available: !!AppleHealthKit, platform: 'ios', authorized: ok, reason: _lastError ?? undefined };
+    return ok;
   } else if (Platform.OS === 'android') {
     return requestHCPermissions();
   }

@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "455854898290",
+    "project_id": "athlr-b",
+    "storage_bucket": "athlr-b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455854898290:android:fe49a66ef179a6f76896eb",
+        "android_client_info": {
+          "package_name": "com.brilworks.athlr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "455854898290-2v4oj6nm2djplsk4td2kvs67knhp6ga6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSguxg6Hg6V1BGgiljnUbG-0ARkgiSGs0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "455854898290-2v4oj6nm2djplsk4td2kvs67knhp6ga6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "455854898290-al6qt69ku3o3p786f6dvhp5aq59skcb9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brilworks.athlr"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455854898290:android:8001ec3e81f64fc26896eb",
+        "android_client_info": {
+          "package_name": "com.brilworks.athlr"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "455854898290-2v4oj6nm2djplsk4td2kvs67knhp6ga6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSguxg6Hg6V1BGgiljnUbG-0ARkgiSGs0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "455854898290-2v4oj6nm2djplsk4td2kvs67knhp6ga6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "455854898290-al6qt69ku3o3p786f6dvhp5aq59skcb9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.brilworks.athlr"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

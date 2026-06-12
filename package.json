@@ -7,7 +7,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -34,7 +35,7 @@
     "expo-task-manager": "~56.0.18",
     "firebase": "^12.14.0",
     "react": "19.2.3",
-    "react-dom": "^19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.85.3",
     "react-native-chart-kit": "^6.12.3",
     "react-native-health": "^1.19.0",
@@ -44,13 +45,23 @@
     "react-native-screens": "4.25.2",
     "react-native-svg": "15.15.4",
     "react-native-view-shot": "5.1.0",
+    "react-native-web": "^0.21.2",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
     "@types/mapbox__polyline": "^1.0.5",
     "@types/react": "~19.2.14",
+    "patch-package": "^8.0.1",
     "typescript": "~6.0.3"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": ["react-native-health"],
+        "listUnknownPackages": false
+      }
+    }
+  }
 }

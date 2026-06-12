@@ -125,7 +125,15 @@ export default function RecordScreen() {
       tapHeavy();
       setCountdown(null);
       start();
-      if (!indoor) startTracking();
+      if (!indoor) {
+        void startTracking().catch((error) => {
+          console.warn('[record] startTracking failed', error);
+          Alert.alert(
+            'Could not start recording',
+            'Athlr could not start location tracking on this device. Please try again or reinstall the production build.',
+          );
+        });
+      }
       return;
     }
     tapLight();
@@ -139,7 +147,17 @@ export default function RecordScreen() {
       setCountdown(3);
       return;
     }
-    const perms = await requestPermissions();
+    let perms;
+    try {
+      perms = await requestPermissions();
+    } catch (error) {
+      console.warn('[record] requestPermissions failed', error);
+      Alert.alert(
+        'Location Access Required',
+        'Athlr could not request location permission on this device. Please check your system settings and try again.',
+      );
+      return;
+    }
     if (!perms.foreground) {
       Alert.alert(
         'Location Access Required',

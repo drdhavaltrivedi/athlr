@@ -6,6 +6,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/services/firebase';
 import { syncPendingActivities } from '@/services/cloudSyncService';
 import { colors } from '@/theme';
+// Must be imported at root so TaskManager.defineTask runs at every app start,
+// including background wakeups triggered by the location task.
+import '@/services/locationService';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -40,7 +43,13 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+            headerBackTitle: 'Back',
+          }}
+        />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="activity/[id]" options={{ title: 'Activity' }} />
         <Stack.Screen

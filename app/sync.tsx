@@ -55,7 +55,13 @@ export default function SyncScreen() {
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    initialize().then(setStatus);
+    initialize().then((s) => {
+      setStatus(s);
+      // If already authorized this session (user connected earlier), fetch workouts
+      if (s.authorized) {
+        fetchWorkouts();
+      }
+    });
   }, []);
 
   const platformName =
