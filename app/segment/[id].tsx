@@ -93,7 +93,7 @@ export default function SegmentScreen() {
             <Polyline coordinates={decodedPoints} strokeColor={colors.accent} strokeWidth={5} />
           )}
           <Marker coordinate={{ latitude: segment.startPoint.lat, longitude: segment.startPoint.lon }}>
-            <View style={[styles.marker, { backgroundColor: colors.success }]} />
+            <View style={[styles.marker, { backgroundColor: colors.live }]} />
           </Marker>
           <Marker coordinate={{ latitude: segment.endPoint.lat, longitude: segment.endPoint.lon }}>
             <View style={[styles.marker, { backgroundColor: colors.danger }]} />
@@ -130,7 +130,7 @@ export default function SegmentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   mapWrap: {
     height: 250,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   header: {
     padding: spacing.l,

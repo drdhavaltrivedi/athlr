@@ -32,7 +32,7 @@ export async function syncActivityToCloud(activity: Activity): Promise<void> {
       const enc = polyline.encode(coords);
       // Use the Firebase API Key as the Google Maps Key. (Note: Ensure Static Maps API is enabled in GCP)
       const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY; 
-      mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x400&path=weight:4%7Ccolor:0xfe5c36ff%7Cenc:${enc}&key=${apiKey}`;
+      mapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x400&path=weight:4%7Ccolor:0xFFB020ff%7Cenc:${enc}&key=${apiKey}`;
     }
     
     // Create a lean version of the activity for the feed.

@@ -275,7 +275,7 @@ export default function ActivityDetailScreen() {
                   propsForBackgroundLines: { strokeWidth: 0 },
                 }}
                 bezier
-                style={{ borderRadius: radii.l, marginBottom: spacing.l }}
+                style={{ borderRadius: radii.card, marginBottom: spacing.l }}
               />
 
               {/* Pace Chart */}
@@ -342,7 +342,7 @@ export default function ActivityDetailScreen() {
                   propsForBackgroundLines: { strokeWidth: 0 },
                 }}
                 bezier
-                style={{ borderRadius: radii.l }}
+                style={{ borderRadius: radii.card }}
               />
             </View>
           )}
@@ -562,6 +562,29 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  chartsContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    padding: spacing.m,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.s,
+  },
+  segmentsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    padding: spacing.m,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.s,
+  },
+  segmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.s,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
   actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: spacing.s },
   actionButton: {
     width: '48%',

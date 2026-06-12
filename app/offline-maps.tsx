@@ -182,7 +182,7 @@ export default function OfflineMapsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   mapContainer: {
     flex: 1,
@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.accent,
     borderStyle: 'dashed',
-    borderRadius: radii.l,
+    borderRadius: radii.card,
     pointerEvents: 'none',
   },
   reticleInner: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(57, 255, 20, 0.1)',
-    borderRadius: radii.l,
+    borderRadius: radii.card,
   },
   panel: {
     flex: 1,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.m,
     paddingVertical: spacing.s,
-    borderRadius: radii.m,
+    borderRadius: radii.card,
     gap: spacing.xs,
   },
   downloadBtnDisabled: {

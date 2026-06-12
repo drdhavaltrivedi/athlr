@@ -3,7 +3,6 @@ import { Activity, RecordingSnapshot, SportType, TrackPoint, Units } from '@/typ
 import { GpsFilter, isStationary } from '@/services/gpsFilter';
 import {
   computeSplits,
-  elevationGainM,
   haversineM,
   rollingPaceSPerKm,
 } from '@/utils/geo';
@@ -125,15 +124,22 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
 
     const points = [...s.points, point];
     let distanceM = s.distanceM;
+    let elevGain = s.elevationGainM;
     if (s.points.length > 0) {
       const prev = s.points[s.points.length - 1];
       distanceM += haversineM(prev.latitude, prev.longitude, point.latitude, point.longitude);
+      // Incremental elevation: only compare the new point to its predecessor
+      // (avoids re-scanning all points — O(1) instead of O(n))
+      if (point.altitude != null && prev.altitude != null) {
+        const gain = point.altitude - prev.altitude;
+        if (gain > 3) elevGain += gain; // same threshold as elevationGainM()
+      }
     }
 
     set({
       points,
       distanceM,
-      elevationGainM: elevationGainM(points),
+      elevationGainM: elevGain,
       currentPaceSPerKm: rollingPaceSPerKm(points),
     });
 
