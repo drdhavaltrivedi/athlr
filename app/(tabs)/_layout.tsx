@@ -56,6 +56,7 @@ export default function TabLayout() {
         name="record"
         options={{
           title: '',
+          tabBarAccessibilityLabel: 'Record an activity',
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <View

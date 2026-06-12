@@ -15,7 +15,7 @@ import { lifetimeStats, LifetimeStats } from '@/db/database';
 import { useRecordingStore } from '@/store/recordingStore';
 import { useAuthStore } from '@/store/authStore';
 import { auth } from '@/services/firebase';
-import { signOut } from 'firebase/auth';
+import { sendEmailVerification, signOut } from 'firebase/auth';
 import { getUserProfile, UserProfile } from '@/services/socialService';
 import { colors, radii, spacing, type } from '@/theme';
 import { formatDistance, formatDuration, distanceUnit } from '@/utils/format';
@@ -117,6 +117,9 @@ export default function ProfileScreen() {
       </View>
 
       <View style={{ paddingHorizontal: spacing.m, gap: spacing.m }}>
+        {/* ─── Email verification nudge ───────────────────────────────────── */}
+        {user && !user.emailVerified && <VerifyEmailBanner />}
+
         {/* ─── All-time stats — distance is the hero ─────────────────────── */}
         <View style={styles.card}>
           <Text style={type.label}>All Time</Text>
@@ -206,6 +209,51 @@ export default function ProfileScreen() {
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function VerifyEmailBanner() {
+  const [sent, setSent] = useState(false);
+  const [, forceRender] = useState(0);
+
+  const onResend = async () => {
+    const u = auth.currentUser;
+    if (!u) return;
+    try {
+      await sendEmailVerification(u);
+      setSent(true);
+    } catch {
+      Alert.alert('Could not send', 'Please try again in a few minutes.');
+    }
+  };
+
+  const onCheck = async () => {
+    await auth.currentUser?.reload().catch(() => {});
+    forceRender((n) => n + 1);
+    if (!auth.currentUser?.emailVerified) {
+      Alert.alert('Not verified yet', 'Tap the link in the email we sent you, then check again.');
+    }
+  };
+
+  if (auth.currentUser?.emailVerified) return null;
+
+  return (
+    <View style={styles.verifyBanner}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.s }}>
+        <Ionicons name="mail-unread" size={18} color={colors.accent} />
+        <Text style={[type.body, { flex: 1 }]}>
+          {sent ? 'Verification email sent — check your inbox.' : 'Please verify your email address.'}
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: spacing.s, marginTop: spacing.s }}>
+        <Pressable style={styles.verifyBtn} onPress={onResend} accessibilityRole="button" accessibilityLabel="Resend verification email">
+          <Text style={styles.verifyBtnText}>{sent ? 'Send again' : 'Resend email'}</Text>
+        </Pressable>
+        <Pressable style={styles.verifyBtn} onPress={onCheck} accessibilityRole="button" accessibilityLabel="Check verification status">
+          <Text style={styles.verifyBtnText}>I&apos;ve verified</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
 
 function MiniStat({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
@@ -464,6 +512,26 @@ const styles = StyleSheet.create({
   promiseCard: {
     gap: spacing.s,
     borderColor: colors.live + '33',
+  },
+  verifyBanner: {
+    backgroundColor: colors.accent + '14',
+    borderWidth: 1,
+    borderColor: colors.accent + '55',
+    borderRadius: radii.card,
+    padding: spacing.m,
+  },
+  verifyBtn: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.m,
+    paddingVertical: 6,
+  },
+  verifyBtnText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
   },
   promiseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.s },
 });

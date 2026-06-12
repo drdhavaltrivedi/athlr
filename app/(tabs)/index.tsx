@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Animated,
   FlatList,
   Image,
   Pressable,
@@ -13,7 +14,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { listActivities } from '@/db/database';
-import { getCommunityFeed, toggleKudo } from '@/services/cloudSyncService';
+import { FEED_PAGE_SIZE, getCommunityFeed } from '@/services/cloudSyncService';
 import { useAuthStore } from '@/store/authStore';
 import { ActivityCard } from '@/components/ActivityCard';
 import { ActivitySummary, SportType } from '@/types';
@@ -44,6 +45,8 @@ const FILTERS: Array<{ key: string; label: string }> = [
   { key: 'yoga', label: '🧘 Yoga' },
 ];
 
+const LOCAL_PAGE_SIZE = 30;
+
 export default function ActivitiesScreen() {
   const router = useRouter();
   const units = useRecordingStore((s) => s.units);
@@ -51,25 +54,66 @@ export default function ActivitiesScreen() {
   const [filter, setFilter] = useState('all');
   const [feedType, setFeedType] = useState<'me' | 'community'>('me');
   const [refreshing, setRefreshing] = useState(false);
-  
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   const { user } = useAuthStore();
   const localDisplayName = useRecordingStore((s) => s.displayName);
   // Local activities have no userName column — stamp the owner's name on them
   const myName = user?.displayName || localDisplayName || 'You';
 
+  const stampOwner = useCallback(
+    (rows: ActivitySummary[]) =>
+      rows.map((a) => ({ ...a, userName: a.userName ?? myName, uid: a.uid ?? user?.uid })),
+    [myName, user?.uid],
+  );
+
   const load = useCallback(async (currentFeed: 'me' | 'community', sport?: string) => {
-    let data;
+    let data: ActivitySummary[];
     if (currentFeed === 'me') {
-      const rows = await listActivities(100, sport === 'all' ? undefined : sport).catch(() => []);
-      data = rows.map((a) => ({ ...a, userName: a.userName ?? myName, uid: a.uid ?? user?.uid }));
+      const rows = await listActivities(LOCAL_PAGE_SIZE, sport === 'all' ? undefined : sport, 0).catch(() => []);
+      data = stampOwner(rows);
+      setHasMore(rows.length === LOCAL_PAGE_SIZE);
     } else {
       data = await getCommunityFeed();
+      setHasMore(data.length === FEED_PAGE_SIZE);
       if (sport && sport !== 'all') {
         data = data.filter((a: any) => a.sport === sport);
       }
     }
     setActivities(data);
-  }, [myName, user?.uid]);
+    setLoading(false);
+  }, [stampOwner]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || loading || !hasMore || activities.length === 0) return;
+    setLoadingMore(true);
+    try {
+      if (feedType === 'me') {
+        const rows = await listActivities(
+          LOCAL_PAGE_SIZE,
+          filter === 'all' ? undefined : filter,
+          activities.length,
+        ).catch(() => []);
+        setHasMore(rows.length === LOCAL_PAGE_SIZE);
+        if (rows.length > 0) setActivities((prev) => [...prev, ...stampOwner(rows)]);
+      } else {
+        const last = activities[activities.length - 1];
+        let rows = await getCommunityFeed(last.startedAt);
+        setHasMore(rows.length === FEED_PAGE_SIZE);
+        if (filter !== 'all') rows = rows.filter((a: any) => a.sport === filter);
+        if (rows.length > 0) {
+          setActivities((prev) => {
+            const seen = new Set(prev.map((a) => a.id));
+            return [...prev, ...rows.filter((a: any) => !seen.has(a.id))];
+          });
+        }
+      }
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, loading, hasMore, activities, feedType, filter, stampOwner]);
 
   useFocusEffect(
     useCallback(() => {
@@ -135,6 +179,9 @@ export default function ActivitiesScreen() {
             key={f.key}
             style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
             onPress={() => onFilterChange(f.key)}
+            accessibilityRole="button"
+            accessibilityLabel={`Filter: ${f.label.replace(/[^\w ]/g, '').trim() || 'All'}`}
+            accessibilityState={{ selected: filter === f.key }}
           >
             <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
               {f.label}
@@ -145,7 +192,9 @@ export default function ActivitiesScreen() {
       </View>
 
       {/* List */}
-      {activities.length === 0 ? (
+      {loading ? (
+        <FeedSkeleton />
+      ) : activities.length === 0 ? (
         <EmptyState filter={filter} onRecord={() => router.push('/record')} />
       ) : (
         <FlatList
@@ -159,6 +208,15 @@ export default function ActivitiesScreen() {
               tintColor={colors.accent}
             />
           }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={{ paddingVertical: spacing.m, alignItems: 'center' }}>
+                <Text style={type.caption}>Loading more…</Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => (
             <ActivityCard
               item={item}
@@ -169,6 +227,45 @@ export default function ActivitiesScreen() {
           )}
         />
       )}
+    </View>
+  );
+}
+
+// ─── Skeleton ────────────────────────────────────────────────────────────────
+
+/** Pulsing placeholder cards shown during the initial feed load. */
+function FeedSkeleton() {
+  const opacity = React.useRef(new Animated.Value(0.4)).current;
+
+  React.useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity]);
+
+  return (
+    <View style={{ padding: spacing.m, gap: spacing.m }}>
+      {[0, 1, 2].map((i) => (
+        <Animated.View key={i} style={[styles.skeletonCard, { opacity }]}>
+          <View style={styles.skeletonRow}>
+            <View style={styles.skeletonCircle} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <View style={[styles.skeletonLine, { width: '55%' }]} />
+              <View style={[styles.skeletonLine, { width: '35%' }]} />
+            </View>
+          </View>
+          <View style={[styles.skeletonLine, { width: '100%', height: 80, borderRadius: radii.card }]} />
+          <View style={styles.skeletonRow}>
+            <View style={[styles.skeletonLine, { flex: 1 }]} />
+            <View style={[styles.skeletonLine, { flex: 1 }]} />
+          </View>
+        </Animated.View>
+      ))}
     </View>
   );
 }
@@ -262,6 +359,27 @@ const styles = StyleSheet.create({
   feedToggleTextActive: {
     color: colors.text,
     fontWeight: '700',
+  },
+
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.m,
+    gap: spacing.m,
+  },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.m },
+  skeletonCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.surfaceAlt,
+  },
+  skeletonLine: {
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.surfaceAlt,
   },
 
   card: {

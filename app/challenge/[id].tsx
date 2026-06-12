@@ -6,6 +6,7 @@ import { Challenge, ChallengeParticipant } from '@/types';
 import { getChallenge, getChallengeLeaderboard, joinChallenge, getMyParticipantInfo, fallbackChallenges } from '@/services/challengeService';
 import { withTimeout } from '@/utils/async';
 import { auth } from '@/services/firebase';
+import { notifySuccess } from '@/utils/haptics';
 import { colors, radii, spacing, type } from '@/theme';
 
 export default function ChallengeDetailScreen() {
@@ -63,6 +64,7 @@ export default function ChallengeDetailScreen() {
     setJoining(true);
     const success = await joinChallenge(challenge);
     if (success) {
+      notifySuccess();
       Alert.alert('Joined!', 'You are now participating in this challenge. Your past qualifying activities have been counted.');
       await loadData();
     } else {

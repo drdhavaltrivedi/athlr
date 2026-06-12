@@ -11,3 +11,8 @@ google-services.json
 GoogleService-Info.plist
 website/.env
 
+android/
+ios/
+# local env (API keys)
+.env
+.env.local

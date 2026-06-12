@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Pressable, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { auth } from '@/services/firebase';
+import { tapSelection } from '@/utils/haptics';
 import { ActivitySummary } from '@/types';
 import { colors, radii, spacing, type } from '@/theme';
 import { formatDate, formatTime, formatDistance, formatDuration, formatPace, distanceUnit, paceUnit, SPORT_ICON, SPORT_COLOR } from '@/utils/format';
@@ -47,6 +48,7 @@ export function ActivityCard({
       );
       return;
     }
+    tapSelection();
     // Optimistic toggle; revert only if the write actually failed
     const newGiven = !given;
     setGiven(newGiven);
@@ -101,7 +103,12 @@ export function ActivityCard({
       {/* Kudos Footer — only for activities that exist in the cloud */}
       {canKudo && (
         <View style={styles.cardFooter}>
-          <Pressable style={styles.kudoBtn} onPress={handleKudo}>
+          <Pressable
+            style={styles.kudoBtn}
+            onPress={handleKudo}
+            accessibilityRole="button"
+            accessibilityLabel={given ? `Remove kudo, ${kudos} kudos` : `Give kudo, ${kudos} kudos`}
+          >
             <Ionicons
               name={given ? "heart" : "heart-outline"}
               size={20}
