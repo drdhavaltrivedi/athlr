@@ -36,8 +36,8 @@ export default function TabLayout() {
               <Pressable onPress={() => router.push('/offline-maps')} style={{ marginRight: spacing.m }}>
                 <Ionicons name="map" size={24} color={colors.accent} />
               </Pressable>
-              <Pressable onPress={() => router.push('/users/search')} style={{ marginRight: spacing.m }}>
-                <Ionicons name="person-add" size={24} color={colors.accent} />
+              <Pressable onPress={() => router.push('/(tabs)/challenges')} style={{ marginRight: spacing.m }}>
+                <Ionicons name="trophy" size={24} color={colors.accent} />
               </Pressable>
             </View>
           ),
@@ -46,9 +46,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="challenges"
         options={{
-          title: 'Clubs',
+          title: 'Find',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy" size={size} color={color} />
+            <Ionicons name="search" size={size} color={color} />
           ),
         }}
       />
