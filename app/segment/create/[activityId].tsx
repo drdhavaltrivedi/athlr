@@ -154,7 +154,7 @@ export default function CreateSegmentScreen() {
           <Polyline coordinates={segmentPoints} strokeColor={colors.accent} strokeWidth={5} />
           
           <Marker coordinate={{ latitude: startPt.latitude, longitude: startPt.longitude }}>
-            <View style={[styles.marker, { backgroundColor: colors.success }]} />
+            <View style={[styles.marker, { backgroundColor: colors.live }]} />
           </Marker>
           <Marker coordinate={{ latitude: endPt.latitude, longitude: endPt.longitude }}>
             <View style={[styles.marker, { backgroundColor: colors.danger }]} />
@@ -166,7 +166,7 @@ export default function CreateSegmentScreen() {
         <Text style={type.h3}>Adjust Endpoints</Text>
         
         <View style={styles.row}>
-          <Text style={[type.label, { width: 60, color: colors.success }]}>Start</Text>
+          <Text style={[type.label, { width: 60, color: colors.live }]}>Start</Text>
           <Pressable style={styles.btn} onPress={() => shiftStart(-10)}><Ionicons name="remove" size={20} color={colors.text}/></Pressable>
           <Pressable style={styles.btn} onPress={() => shiftStart(10)}><Ionicons name="add" size={20} color={colors.text}/></Pressable>
         </View>
@@ -192,7 +192,7 @@ export default function CreateSegmentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
   },
   mapWrap: {
     flex: 1,
@@ -218,14 +218,14 @@ const styles = StyleSheet.create({
   btn: {
     backgroundColor: colors.border,
     padding: spacing.s,
-    borderRadius: radii.s,
+    borderRadius: radii.card,
     width: 50,
     alignItems: 'center',
   },
   saveBtn: {
     backgroundColor: colors.accent,
     padding: spacing.m,
-    borderRadius: radii.m,
+    borderRadius: radii.card,
     alignItems: 'center',
     marginTop: spacing.s,
   },

@@ -6,7 +6,7 @@ import {
 } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -20,9 +20,18 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase Auth with persistence
+// expo-secure-store adapter for Firebase auth persistence.
+// Replaces @react-native-async-storage which requires separate native linking
+// and crashes when the native module isn't in the binary (e.g. after npm install).
+const secureStoreAdapter = {
+  getItem: (key: string) => SecureStore.getItemAsync(key),
+  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
+};
+
+// Initialize Firebase Auth with SecureStore-backed persistence
 export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
+  persistence: getReactNativePersistence(secureStoreAdapter),
 });
 
 // React Native's network stack breaks Firestore's default WebChannel streaming

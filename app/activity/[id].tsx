@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { deleteActivity, getActivity, updateTitle, updateVisibility } from '@/db/database';
-import { Activity, ActivityVisibility } from '@/types';
+import { Activity, ActivityVisibility, SegmentEffort } from '@/types';
 import { exportAndShareGpx } from '@/utils/gpx';
 import ShareCard from '@/components/ShareCard';
 import * as healthService from '@/services/healthService';
@@ -48,7 +48,7 @@ export default function ActivityDetailScreen() {
   const units = useRecordingStore((s) => s.units);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [segmentEfforts, setSegmentEfforts] = useState<segmentService.SegmentEffort[]>([]);
+  const [segmentEfforts, setSegmentEfforts] = useState<SegmentEffort[]>([]);
   const shareCardRef = React.useRef<View>(null);
 
   useEffect(() => {
@@ -288,7 +288,7 @@ export default function ActivityDetailScreen() {
                       const step = Math.max(1, Math.floor(pts.length / 50));
                       const downsamp = pts.filter((_, i) => i % step === 0);
                       // Calculate pace between downsampled points
-                      const paces = [];
+                      const paces: number[] = [];
                       for(let i = 1; i < downsamp.length; i++) {
                         const p1 = downsamp[i-1];
                         const p2 = downsamp[i];
